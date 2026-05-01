@@ -110,7 +110,7 @@ BAD_RESIN_BATCHES = RESIN_BATCHES[:5]                    # 5 problematic batches
 | `blade_wear_index` | Drift | normalized | 0.0 | 0.0-1.0 |
 | `cooling_water_flow` | Process | L/min | 1.5 | 1.0-2.0 |
 
-**Total: 22 raw features across 5 stages** (+ derived cumulative features)
+**Total: 23 raw features across 5 stages** (+ derived cumulative features)
 
 ---
 
@@ -391,7 +391,7 @@ rrs_5 = compute_cumulative_rrs(rrs_4, compute_rrs_stage5(unit))  # FINAL cumulat
 After all 5 stages, each unit has:
 
 ```
-22 raw features (from stages 1-5)
+23 raw features (from stages 1-5)
  5 per-stage RRS scores (rrs_1 through rrs_5)
  5 stage_rrs_delta values (how much risk increased at each stage)
  1 machine_risk_score (aggregate risk of the machines used)

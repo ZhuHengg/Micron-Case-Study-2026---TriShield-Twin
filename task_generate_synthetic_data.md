@@ -105,7 +105,7 @@ DEFECT_ARCHETYPES = {
 
 ### 2C: Per-Stage Parameter Distributions
 
-For EACH archetype, define all 22 parameters. Example for `void_delamination`:
+For EACH archetype, define all 23 parameters. Example for `void_delamination`:
 
 ```python
 'void_delamination': {
@@ -430,7 +430,7 @@ df_machines.to_csv('data/machines.csv', index=False)
 - [ ] Runs end-to-end with `python generate_synthetic_data.py`
 - [ ] Produces exactly 2,000,000 rows
 - [ ] Bin distribution within 0.1% of targets
-- [ ] All 22 raw features have realistic ranges (no values outside physical limits)
+- [ ] All 23 raw features have realistic ranges (no values outside physical limits)
 - [ ] RRS scores are 0-1, cumulative stacking is visible (rrs_5 > rrs_1 for most units)
 - [ ] machine_risk_score has overlap zone between healthy and degraded machines
 - [ ] Sanity check printout shows all metrics in expected ranges
