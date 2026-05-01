@@ -293,42 +293,74 @@ df = pd.DataFrame(records)
 
 ---
 
-## STEP 6 — COMPUTE MACHINE RISK SCORE (Post-Hoc Derived Feature)
+## STEP 6 — COMPUTE MACHINE RISK SCORE (Empirically Weighted)
 
-Mirror FraudShieldAI's Step 7 (recipient_risk_profile_score).
+Mirror FraudShieldAI's philosophy: **never hardcode — derive from data.**
+
+### 6A: Per-Machine Risk (same as before)
 
 For each machine, aggregate stats from all units that passed through it:
 
 ```python
+df['is_defective'] = (df['bin_code'] >= 4).astype(int)
+
 for stage_col in ['machine_db', 'machine_wb', 'machine_mp', 'machine_ba', 'machine_sw']:
     machine_stats = df.groupby(stage_col).agg(
         total_units      = ('unit_id', 'count'),
-        defect_rate      = ('is_defective', 'mean'),    # is_defective = bin_code >= 4
+        defect_rate      = ('is_defective', 'mean'),
         avg_rrs          = ('rrs_5', 'mean'),
         max_rrs          = ('rrs_5', 'max'),
     ).reset_index()
 
-    # Weighted machine risk (like recipient_risk_profile_score formula)
+    # Per-machine risk (this formula stays fixed — it's a definition)
     machine_stats['risk'] = (
         machine_stats['defect_rate'] * 0.40 +
         machine_stats['avg_rrs']     * 0.35 +
         machine_stats['max_rrs']     * 0.25
     ).clip(0, 1).round(3)
 
-    # Map back to df
-    # ...
+    # Map back to df as machine_db_risk, machine_wb_risk, etc.
+    risk_map = dict(zip(machine_stats[stage_col], machine_stats['risk']))
+    df[f'{stage_col}_risk'] = df[stage_col].map(risk_map)
 ```
 
-Combine all 5 per-stage machine risks into single `machine_risk_score`:
+### 6B: Empirical Stage Weights (NEW — replaces hardcoded 0.25/0.20/0.15)
+
+Instead of hardcoding which stage matters most, **derive weights from
+correlation between each stage's per-machine risk and the defect outcome:**
+
 ```python
-df['machine_risk_score'] = (
-    df['machine_db_risk'] * 0.25 +
-    df['machine_wb_risk'] * 0.25 +
-    df['machine_mp_risk'] * 0.20 +
-    df['machine_ba_risk'] * 0.15 +
-    df['machine_sw_risk'] * 0.15
+# Step 1: Compute correlation of each stage's machine risk with is_defective
+stage_risk_cols = ['machine_db_risk', 'machine_wb_risk', 'machine_mp_risk',
+                   'machine_ba_risk', 'machine_sw_risk']
+
+correlations = {}
+for col in stage_risk_cols:
+    correlations[col] = abs(df[col].corr(df['is_defective']))
+
+# Step 2: Normalize correlations to sum to 1.0 → these become the weights
+total_corr = sum(correlations.values())
+empirical_weights = {col: corr / total_corr for col, corr in correlations.items()}
+
+# Step 3: Apply empirical weights to compute machine_risk_score
+df['machine_risk_score'] = sum(
+    df[col] * weight for col, weight in empirical_weights.items()
 ).round(3)
+
+# Step 4: Print derived weights for reproducibility
+print("\n=== EMPIRICAL MACHINE RISK WEIGHTS ===")
+print("(Derived from correlation with is_defective)")
+for col, w in empirical_weights.items():
+    stage_name = col.replace('machine_', '').replace('_risk', '')
+    print(f"  {stage_name:12s}: {w:.4f}  (corr={correlations[col]:.4f})")
 ```
+
+### Why this is better than hardcoded weights:
+
+- **Self-correcting:** If you change bin distributions, weights auto-adjust
+- **Data-driven:** Stages that actually cause more defects get higher weight
+- **Reproducible:** Weights are printed and can be logged for audit
+- **Industry 4.0 alignment:** Dynamic weighting based on process variance
 
 Similarly compute `resin_batch_risk_score` from resin batch defect rates.
 
