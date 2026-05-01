@@ -198,17 +198,32 @@ DEFECT_ARCHETYPES = {
         },
     },
 
-    'mold_void_wire_sweep': {
-        'weight': 0.20,  # maps to Bin 5 (High-Temp) or Bin 8 (Short)
-        'target_bins': [5, 8],
-        'target_bin_weights': [0.6, 0.4],
-        'root_cause_stage': 3,  # Mold
+    'wire_sweep': {
+        'weight': 0.10,  # maps to Bin 8 (Short Circuit)
+        'target_bin': 8,
+        'root_cause_stage': 3,  # Mold — high pressure pushes wires sideways
+        'description': 'High transfer pressure sweeps dense wires until they touch',
         'stage3': {
-            'transfer_pressure':   {'mean': 9.5,  'std': 0.5},  # too high
-            'vacuum_level':        {'mean': 8.0,  'std': 1.5},  # poor vacuum
-            'molding_temperature': {'mean': 188,  'std': 3.0},  # too hot
+            'transfer_pressure':   {'mean': 9.8,  'std': 0.3},  # TOO HIGH
+            'clamping_force':      {'mean': 55,   'std': 3.0},  # high (contributes)
+            'molding_temperature': {'mean': 182,  'std': 3.0},  # normal-ish
+            'vacuum_level':        {'mean': 4.0,  'std': 1.5},  # decent vacuum
         },
-        'uses_bad_resin': True,  # preferentially uses BAD_RESIN_BATCHES
+    },
+
+    'popcorn_delamination': {
+        'weight': 0.10,  # maps to Bin 5 (High-Temp) or Bin 7 (Open Circuit)
+        'target_bins': [5, 7],
+        'target_bin_weights': [0.6, 0.4],
+        'root_cause_stage': 3,  # Mold — trapped moisture voids explode at reflow
+        'description': 'Poor vacuum traps moisture; voids explode at reflow, ripping wires',
+        'stage3': {
+            'transfer_pressure':   {'mean': 7.5,  'std': 0.8},  # normal
+            'clamping_force':      {'mean': 45,   'std': 4.0},  # slightly low
+            'molding_temperature': {'mean': 173,  'std': 3.0},  # TOO LOW → incomplete cure
+            'vacuum_level':        {'mean': 8.5,  'std': 1.0},  # POOR → traps moisture
+        },
+        'uses_bad_resin': True,  # bad resin absorbs more moisture
     },
 
     'thermal_fracture': {

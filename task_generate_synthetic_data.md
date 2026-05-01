@@ -89,16 +89,17 @@ HEALTHY_ARCHETYPES = {
 - `marginal_drift` → 60% Bin 1, 25% Bin 2, 15% Bin 3
 - `batch_variation` → 70% Bin 1, 20% Bin 2, 10% Bin 3
 
-### 2B: Defect Archetypes (6 types)
+### 2B: Defect Archetypes (7 types)
 
 ```python
 DEFECT_ARCHETYPES = {
-    'void_delamination':     {'weight': 0.1875, 'target_bin': 6, 'root_stage': 1},
-    'wire_non_stick':        {'weight': 0.1875, 'target_bin': 7, 'root_stage': 2},
-    'mold_void_sweep':       {'weight': 0.1875, 'target_bins': [5,8], 'bin_weights': [0.6,0.4], 'root_stage': 3},
-    'thermal_fracture':      {'weight': 0.1875, 'target_bin': 7, 'root_stage': 4},
-    'ball_bridge_saw':       {'weight': 0.125,  'target_bin': 8, 'root_stage': 5},
-    'fab_defect_passthrough':{'weight': 0.125,  'target_bin': 4, 'root_stage': 0},
+    'void_delamination':      {'weight': 0.19, 'target_bin': 6, 'root_stage': 1},
+    'wire_non_stick':         {'weight': 0.19, 'target_bin': 7, 'root_stage': 2},
+    'wire_sweep':             {'weight': 0.12, 'target_bin': 8, 'root_stage': 3},  # HIGH pressure
+    'popcorn_delamination':   {'weight': 0.12, 'target_bins': [5,7], 'bin_weights': [0.6,0.4], 'root_stage': 3},  # POOR vacuum
+    'thermal_fracture':       {'weight': 0.15, 'target_bin': 7, 'root_stage': 4},
+    'ball_bridge_saw':        {'weight': 0.11, 'target_bin': 8, 'root_stage': 5},
+    'fab_defect_passthrough': {'weight': 0.12, 'target_bin': 4, 'root_stage': 0},
 }
 # Weights sum to 1.0. Actual counts controlled by BIN_X_COUNT constants.
 ```
