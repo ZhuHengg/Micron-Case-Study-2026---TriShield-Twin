@@ -7,9 +7,9 @@ from sklearn.preprocessing import MinMaxScaler
 np.random.seed(42)
 
 # --- CONSTANTS ---
-TOTAL_UNITS = 2_000_000
-N_HEALTHY   = 1_840_000   # 92%
-N_DEFECTIVE = 160_000     # 8%
+TOTAL_UNITS = 200_000
+N_HEALTHY   = 184_000   # 92%
+N_DEFECTIVE = 16_000     # 8%
 
 print(f"Starting generation of {TOTAL_UNITS} units...")
 
