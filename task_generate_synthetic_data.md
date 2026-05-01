@@ -31,9 +31,9 @@ BIN_3_COUNT =   140_000  #  7% Capacity Downgrade
 # Bin distribution within N_DEFECTIVE
 BIN_4_COUNT =  30_000    # 1.5% Logic/Fab Defect
 BIN_5_COUNT =  30_000    # 1.5% High-Temp Fail
-BIN_7_COUNT =  30_000    # 1.5% DC Gross Leakage
-BIN_8_COUNT =  30_000    # 1.5% Open Circuit
-BIN_9_COUNT =  20_000    # 1.0% Short Circuit
+BIN_6_COUNT =  30_000    # 1.5% DC Gross Leakage
+BIN_7_COUNT =  30_000    # 1.5% Open Circuit
+BIN_8_COUNT =  20_000    # 1.0% Short Circuit
 ```
 
 ---
@@ -93,11 +93,11 @@ HEALTHY_ARCHETYPES = {
 
 ```python
 DEFECT_ARCHETYPES = {
-    'void_delamination':     {'weight': 0.1875, 'target_bin': 7, 'root_stage': 1},
-    'wire_non_stick':        {'weight': 0.1875, 'target_bin': 8, 'root_stage': 2},
-    'mold_void_sweep':       {'weight': 0.1875, 'target_bins': [5,9], 'bin_weights': [0.6,0.4], 'root_stage': 3},
-    'thermal_fracture':      {'weight': 0.1875, 'target_bin': 8, 'root_stage': 4},
-    'ball_bridge_saw':       {'weight': 0.125,  'target_bin': 9, 'root_stage': 5},
+    'void_delamination':     {'weight': 0.1875, 'target_bin': 6, 'root_stage': 1},
+    'wire_non_stick':        {'weight': 0.1875, 'target_bin': 7, 'root_stage': 2},
+    'mold_void_sweep':       {'weight': 0.1875, 'target_bins': [5,8], 'bin_weights': [0.6,0.4], 'root_stage': 3},
+    'thermal_fracture':      {'weight': 0.1875, 'target_bin': 7, 'root_stage': 4},
+    'ball_bridge_saw':       {'weight': 0.125,  'target_bin': 8, 'root_stage': 5},
     'fab_defect_passthrough':{'weight': 0.125,  'target_bin': 4, 'root_stage': 0},
 }
 # Weights sum to 1.0. Actual counts controlled by BIN_X_COUNT constants.

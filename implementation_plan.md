@@ -10,7 +10,7 @@
 | FraudShieldAI Concept | Aeternum Equivalent |
 |---|---|
 | Transaction | A single Unit_ID passing through all 5 stages |
-| `is_fraud` (binary label) | `bin_code` (multiclass: Bin 1–9) |
+| `is_fraud` (binary label) | `bin_code` (multiclass: Bin 1–8) |
 | Fraud archetypes (account_takeover, mule, etc.) | **Defect archetypes** (void_delamination, wire_non_stick, mold_void, etc.) |
 | Legit archetypes (migrant_worker, elderly, etc.) | **Healthy archetypes** (nominal_fast, nominal_slow, marginal_drift, etc.) |
 | `recipient_risk_profile_score` (derived feature) | **Cumulative RRS** (Reliability Risk Score — updates per stage) |
@@ -35,9 +35,9 @@ Bin 3 (Capacity Downgrade):  7%  =   140,000
 --- Sellable total: 92% ---
 Bin 4 (Logic/Fab Defect):    1.5% =  30,000  (not packaging-caused)
 Bin 5 (High-Temp Fail):      1.5% =  30,000  (Stage 3 mold voids)
-Bin 7 (DC Gross Leakage):    1.5% =  30,000  (Stage 1 die bond cracks)
-Bin 8 (Open Circuit):        1.5% =  30,000  (Stage 2/4 wire issues)
-Bin 9 (Short Circuit):       1.0% =  20,000  (Stage 3/5 bridging)
+Bin 6 (DC Gross Leakage):    1.5% =  30,000  (Stage 1 die bond cracks)
+Bin 7 (Open Circuit):        1.5% =  30,000  (Stage 2/4 wire issues)
+Bin 8 (Short Circuit):       1.0% =  20,000  (Stage 3/5 bridging)
 --- Scrap total: 8% = 160,000 units ---
 ```
 
@@ -170,8 +170,8 @@ HEALTHY_ARCHETYPES = {
 DEFECT_ARCHETYPES = {
 
     'void_delamination': {
-        'weight': 0.25,  # maps to Bin 7 (DC Gross Leakage)
-        'target_bin': 7,
+        'weight': 0.25,  # maps to Bin 6 (DC Gross Leakage)
+        'target_bin': 6,
         'root_cause_stage': 1,  # Die Bond
         'description': 'Epoxy void or delamination from die bond issues',
         'stage1': {
@@ -185,8 +185,8 @@ DEFECT_ARCHETYPES = {
     },
 
     'wire_non_stick': {
-        'weight': 0.25,  # maps to Bin 8 (Open Circuit)
-        'target_bin': 8,
+        'weight': 0.25,  # maps to Bin 7 (Open Circuit)
+        'target_bin': 7,
         'root_cause_stage': 2,  # Wire Bond
         'description': 'Wire bond non-stick or lift-off',
         'stage1': 'inherit_nominal',
@@ -199,8 +199,8 @@ DEFECT_ARCHETYPES = {
     },
 
     'mold_void_wire_sweep': {
-        'weight': 0.20,  # maps to Bin 5 (High-Temp) or Bin 9 (Short)
-        'target_bins': [5, 9],
+        'weight': 0.20,  # maps to Bin 5 (High-Temp) or Bin 8 (Short)
+        'target_bins': [5, 8],
         'target_bin_weights': [0.6, 0.4],
         'root_cause_stage': 3,  # Mold
         'stage3': {
@@ -212,8 +212,8 @@ DEFECT_ARCHETYPES = {
     },
 
     'thermal_fracture': {
-        'weight': 0.15,  # maps to Bin 8 (Open Circuit)
-        'target_bin': 8,
+        'weight': 0.15,  # maps to Bin 7 (Open Circuit)
+        'target_bin': 7,
         'root_cause_stage': 4,  # Ball Attach
         'stage4': {
             'reflow_peak_temp':       {'mean': 268, 'std': 3.0},  # too hot
@@ -222,8 +222,8 @@ DEFECT_ARCHETYPES = {
     },
 
     'ball_bridge_saw_damage': {
-        'weight': 0.10,  # maps to Bin 9 (Short Circuit)
-        'target_bin': 9,
+        'weight': 0.10,  # maps to Bin 8 (Short Circuit)
+        'target_bin': 8,
         'root_cause_stage': 5,  # Saw or Ball Attach
         'stage4': {
             'ball_placement_accuracy': {'mean': 20, 'std': 5.0},  # offset
@@ -266,38 +266,124 @@ RRS_after_stage_5 = f(Stage 1-4 features, Stage 5 features, RRS_4)  <- FINAL
 
 ### 4.2 RRS Computation (Per Stage)
 
+Each stage has its **own** `compute_rrs_stageN()` function with different parameters and weights. These are **predefined physics-based formulas** — not learned from data. They normalize each stage's raw parameters into a 0–1 risk score.
+
+#### Summary Table
+
+| Stage | Function | Input Parameters | Normalization | Weights | Dominant Signal |
+|-------|----------|-----------------|---------------|---------|-----------------|
+| 1 (Die Bond) | `compute_rrs_stage1()` | `bond_force`, `xy_placement_offset`, `bond_line_thickness` | `abs(val - nominal) / half_range` | 0.40, 0.35, 0.25 | Force deviation (0.40) |
+| 2 (Wire Bond) | `compute_rrs_stage2()` | `ultrasonic_power`, `bond_time`, `loop_height`, `capillary_stroke_count` | `abs(val - nominal) / half_range`; wear = `count / max_life` | 0.30, 0.30, 0.20, 0.20 | Capillary wear + power (0.30 each) |
+| 3 (Mold) | `compute_rrs_stage3()` | `transfer_pressure`, `vacuum_level`, `molding_temperature`, `resin_batch_risk` | `abs(val - nominal) / half_range`; vacuum = `val / max` | 0.30, 0.25, 0.25, 0.20 | Vacuum quality (0.30) |
+| 4 (Ball Attach) | `compute_rrs_stage4()` | `reflow_peak_temp`, `ball_placement_accuracy`, `flux_density` | `abs(val - nominal) / half_range`; placement = `val / max_spec` | 0.35, 0.35, 0.30 | Thermal overshoot + placement (0.35 each) |
+| 5 (Saw) | `compute_rrs_stage5()` | `blade_wear_index`, `vibration_amplitude`, `spindle_current` | wear = raw (already 0–1); vibration = `val / max`; current = `abs(val - nom) / range` | 0.35, 0.35, 0.30 | Blade wear + vibration (0.35 each) |
+
+#### All 5 Stage Functions
+
 ```python
-def compute_rrs_stage1(unit):
-    """Die Bond risk contribution."""
-    stress_signals = {
-        'force_deviation':    abs(unit['bond_force'] - 30.0) / 5.0,
-        'placement_error':    unit['xy_placement_offset'] / 15.0,
-        'blt_deviation':      abs(unit['bond_line_thickness'] - 25.0) / 7.0,
-    }
-    # Weighted sum (mirrors behavioral rules weighting)
-    rrs_1 = (
-        stress_signals['force_deviation']  * 0.40 +
-        stress_signals['placement_error']  * 0.35 +
-        stress_signals['blt_deviation']    * 0.25
-    )
-    return np.clip(rrs_1, 0.0, 1.0)
-
-
-def compute_rrs_cumulative(unit, stage, prev_rrs):
+def compute_rrs_stage1(unit: dict) -> float:
+    """Die Bond risk. Uses only Unit-level features from Stage 1.
+    Normalization: deviation from nominal / half of spec range.
+    bond_force nominal=30, spec 25-35, so half_range=5.
+    xy_offset nominal=0, spec 0-15, so max=15.
+    BLT nominal=25, spec 18-32, so half_range=7.
     """
-    Cumulative RRS with tolerance stacking.
-    Key: stress is MULTIPLICATIVE, not additive.
-    A small deviation in Stage 1 + small deviation in Stage 2
-    creates disproportionate risk at Stage 3+.
-    """
-    stage_rrs = compute_rrs_for_stage(unit, stage)
+    force_dev = abs(unit['bond_force'] - 30.0) / 5.0
+    place_err = unit['xy_placement_offset'] / 15.0
+    blt_dev   = abs(unit['bond_line_thickness'] - 25.0) / 7.0
+    raw = force_dev * 0.40 + place_err * 0.35 + blt_dev * 0.25
+    return np.clip(raw, 0.0, 1.0)
 
-    # Tolerance stacking formula:
-    # If prev_rrs and stage_rrs are both elevated, risk compounds
-    interaction = prev_rrs * stage_rrs * 1.5  # compounding factor
+
+def compute_rrs_stage2(unit: dict) -> float:
+    """Wire Bond risk. Includes drift feature (capillary_stroke_count).
+    Normalization: deviation / half_range for continuous params.
+    capillary_stroke_count: 0 = new tool, 500K = end of life → linear 0-1.
+    """
+    power_dev = abs(unit['ultrasonic_power'] - 1.2) / 0.4
+    time_dev  = abs(unit['bond_time'] - 15.0) / 5.0
+    loop_dev  = abs(unit['loop_height'] - 200) / 50.0
+    wear      = unit['capillary_stroke_count'] / 500_000
+    raw = wear * 0.30 + power_dev * 0.30 + time_dev * 0.20 + loop_dev * 0.20
+    return np.clip(raw, 0.0, 1.0)
+
+
+def compute_rrs_stage3(unit: dict) -> float:
+    """Mold risk. Includes resin batch risk (post-hoc derived feature).
+    vacuum_level: lower = better vacuum. 1 mbar = ideal, 10 = poor.
+    Normalized as val/10 so higher = worse.
+    """
+    press_dev  = abs(unit['transfer_pressure'] - 8.0) / 2.0
+    vac_risk   = unit['vacuum_level'] / 10.0
+    temp_dev   = abs(unit['molding_temperature'] - 180) / 10.0
+    resin_risk = unit.get('resin_batch_risk', 0.0)
+    raw = vac_risk * 0.30 + temp_dev * 0.25 + press_dev * 0.25 + resin_risk * 0.20
+    return np.clip(raw, 0.0, 1.0)
+
+
+def compute_rrs_stage4(unit: dict) -> float:
+    """Ball Attach risk. Thermal overshoot is the primary concern.
+    reflow_peak_temp nominal=260, spec 250-270, half_range=10.
+    ball_placement_accuracy: 0 = perfect, 25 = max spec.
+    flux_density nominal=0.8, spec 0.5-1.1, half_range=0.3.
+    """
+    temp_dev = abs(unit['reflow_peak_temp'] - 260) / 10.0
+    ball_err = unit['ball_placement_accuracy'] / 25.0
+    flux_dev = abs(unit['flux_density'] - 0.8) / 0.3
+    raw = temp_dev * 0.35 + ball_err * 0.35 + flux_dev * 0.30
+    return np.clip(raw, 0.0, 1.0)
+
+
+def compute_rrs_stage5(unit: dict) -> float:
+    """Saw Singulation risk. Includes drift feature (blade_wear_index).
+    blade_wear_index: already 0-1 (0=new, 1=end of life).
+    vibration_amplitude: 0 = no vibration, 1.5G = max safe.
+    spindle_current nominal=2.0A, spec 1.5-2.5, half_range=0.5.
+    """
+    blade       = unit['blade_wear_index']
+    vib_risk    = unit['vibration_amplitude'] / 1.5
+    current_dev = abs(unit['spindle_current'] - 2.0) / 0.5
+    raw = blade * 0.35 + vib_risk * 0.35 + current_dev * 0.30
+    return np.clip(raw, 0.0, 1.0)
+```
+
+#### Cumulative Stacking Formula (Shared Across All Stages)
+
+After each stage's own RRS is computed, it is folded into the running cumulative score using this **tolerance stacking** equation:
+
+```python
+def compute_cumulative_rrs(prev_rrs: float, stage_rrs: float) -> float:
+    """
+    Combines the previous cumulative RRS with the current stage's RRS.
+    The interaction term is the key — it makes two small deviations
+    compound into disproportionate risk (tolerance stacking).
+
+    Components:
+      prev_rrs  * 0.6  → inherited stress from all previous stages (60% weight)
+      stage_rrs * 0.3  → new stress from this stage (30% weight)
+      interaction * 0.1 → compounding penalty (10% weight, amplified by 1.5x)
+
+    Example:
+      prev_rrs=0.3, stage_rrs=0.3 → interaction=0.3*0.3*1.5=0.135
+      cumulative = 0.3*0.6 + 0.3*0.3 + 0.135*0.1 = 0.18 + 0.09 + 0.0135 = 0.2835
+
+      prev_rrs=0.7, stage_rrs=0.7 → interaction=0.7*0.7*1.5=0.735
+      cumulative = 0.7*0.6 + 0.7*0.3 + 0.735*0.1 = 0.42 + 0.21 + 0.0735 = 0.7035
+      (high prev + high current → risk accelerates)
+    """
+    interaction = prev_rrs * stage_rrs * 1.5
     cumulative = prev_rrs * 0.6 + stage_rrs * 0.3 + interaction * 0.1
-
     return np.clip(cumulative, 0.0, 1.0)
+```
+
+#### How It's Applied In `generate_record()`
+
+```
+rrs_1 = compute_rrs_stage1(unit)                          # Stage 1 standalone
+rrs_2 = compute_cumulative_rrs(rrs_1, compute_rrs_stage2(unit))  # Stack on Stage 1
+rrs_3 = compute_cumulative_rrs(rrs_2, compute_rrs_stage3(unit))  # Stack on 1+2
+rrs_4 = compute_cumulative_rrs(rrs_3, compute_rrs_stage4(unit))  # Stack on 1+2+3
+rrs_5 = compute_cumulative_rrs(rrs_4, compute_rrs_stage5(unit))  # FINAL cumulative
 ```
 
 ### 4.3 Final Feature Vector Per Unit
@@ -354,7 +440,7 @@ Like FraudShieldAI's noise injection on recipient_risk_profile_score:
 ```python
 LGBMClassifier(
     objective='multiclass',      # NOT binary like FraudShieldAI
-    num_class=9,                 # Bins 1-5, 7-9 (skip Bin 6)
+    num_class=8,                 # Bins 1-8
     n_estimators=500,
     learning_rate=0.05,
     max_depth=8,                 # deeper than fraud (more complex patterns)
@@ -364,7 +450,7 @@ LGBMClassifier(
 )
 ```
 
-Key difference: Output is 9 class probabilities. The risk score becomes `1 - P(Bin 1)`.
+Key difference: Output is 8 class probabilities. The risk score becomes `1 - P(Bin 1)`.
 
 ### Shield 2: Isolation Forest (Unsupervised) — Anomaly Detection
 
