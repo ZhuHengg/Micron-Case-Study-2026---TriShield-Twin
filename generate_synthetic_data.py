@@ -1,4 +1,5 @@
 import os
+import gc
 import numpy as np
 import pandas as pd
 
@@ -27,6 +28,7 @@ DEGRADED = {
     'die_bonder':   MACHINE_POOLS['die_bonder'][:3],
     'wire_bonder':  MACHINE_POOLS['wire_bonder'][:5],
     'mold_press':   MACHINE_POOLS['mold_press'][:2],
+    'ball_attach':  MACHINE_POOLS['ball_attach'][:3],
     'saw':          MACHINE_POOLS['saw'][:2],
 }
 
@@ -55,13 +57,13 @@ HEALTHY_ARCHETYPES = {
 }
 
 DEFECT_ARCHETYPES = {
-    'void_delamination':      {'weight': 0.19, 'target_bin': 6, 'root_stage': 1},
-    'wire_non_stick':         {'weight': 0.19, 'target_bin': 7, 'root_stage': 2},
-    'wire_sweep':             {'weight': 0.12, 'target_bin': 8, 'root_stage': 3},
-    'popcorn_delamination':   {'weight': 0.12, 'target_bins': [5,7], 'bin_weights': [0.6,0.4], 'root_stage': 3},
-    'thermal_fracture':       {'weight': 0.15, 'target_bin': 7, 'root_stage': 4},
-    'ball_bridge_saw':        {'weight': 0.11, 'target_bin': 8, 'root_stage': 5},
-    'fab_defect_passthrough': {'weight': 0.12, 'target_bin': 4, 'root_stage': 0},
+    'void_delamination':      {'weight': 0.1875, 'target_bin': 6, 'root_stage': 1},
+    'wire_non_stick':         {'weight': 0.03125, 'target_bin': 7, 'root_stage': 2},
+    'wire_sweep':             {'weight': 0.1250, 'target_bin': 8, 'root_stage': 3},
+    'popcorn_delamination':   {'weight': 0.3125, 'target_bins': [5,7], 'bin_weights': [0.6,0.4], 'root_stage': 3},
+    'thermal_fracture':       {'weight': 0.03125, 'target_bin': 7, 'root_stage': 4},
+    'ball_bridge_saw':        {'weight': 0.1250, 'target_bin': 8, 'root_stage': 5},
+    'fab_defect_passthrough': {'weight': 0.1875, 'target_bin': 4, 'root_stage': 0},
 }
 
 NOMINAL_PARAMS = {
@@ -102,46 +104,46 @@ NOMINAL_PARAMS = {
 ARCHETYPE_OVERRIDES = {
     'void_delamination': {
         'stage1': {
-            'bond_force':          {'mean': 22.0, 'std': 3.0},
-            'xy_placement_offset': {'mean': 12.0, 'std': 4.0},
-            'bond_line_thickness': {'mean': 15.0, 'std': 3.0},
+            'bond_force':          {'mean': 8.0, 'std': 1.0},
+            'xy_placement_offset': {'mean': 30.0, 'std': 2.0},
+            'bond_line_thickness': {'mean': 5.0, 'std': 1.0},
         }
     },
     'wire_non_stick': {
         'stage2': {
-            'ultrasonic_power':       {'mean': 0.7, 'std': 0.15},
-            'bond_time':              {'mean': 11.0, 'std': 1.5},
-            'loop_height':            {'mean': 240, 'std': 15},
-            'capillary_stroke_count': {'mean': 350000, 'std': 50000},
+            'ultrasonic_power':       {'mean': 0.2, 'std': 0.05},
+            'bond_time':              {'mean': 2.0, 'std': 0.5},
+            'loop_height':            {'mean': 350, 'std': 10},
+            'capillary_stroke_count': {'mean': 550000, 'std': 20000},
         }
     },
     'wire_sweep': {
         'stage3': {
-            'transfer_pressure':   {'mean': 9.8, 'std': 0.3},
-            'clamping_force':      {'mean': 55,  'std': 3.0},
+            'transfer_pressure':   {'mean': 15.0, 'std': 0.5},
+            'clamping_force':      {'mean': 75,  'std': 2.0},
         }
     },
     'popcorn_delamination': {
         'stage3': {
-            'molding_temperature': {'mean': 173, 'std': 3.0},
-            'vacuum_level':        {'mean': 8.5, 'std': 1.0},
+            'molding_temperature': {'mean': 130, 'std': 3.0},
+            'vacuum_level':        {'mean': 25.0, 'std': 2.0},
         }
     },
     'thermal_fracture': {
         'stage4': {
-            'reflow_peak_temp':        {'mean': 268, 'std': 3.0},
-            'ball_placement_accuracy': {'mean': 18.0, 'std': 5.0},
+            'reflow_peak_temp':        {'mean': 310, 'std': 3.0},
+            'ball_placement_accuracy': {'mean': 40.0, 'std': 3.0},
         }
     },
     'ball_bridge_saw': {
         'stage4': {
-            'ball_placement_accuracy': {'mean': 20.0, 'std': 5.0},
-            'flux_density':            {'mean': 1.05, 'std': 0.1},
+            'ball_placement_accuracy': {'mean': 45.0, 'std': 4.0},
+            'flux_density':            {'mean': 1.8, 'std': 0.1},
         },
         'stage5': {
-            'spindle_current':     {'mean': 2.4, 'std': 0.2},
-            'vibration_amplitude': {'mean': 1.2, 'std': 0.3},
-            'blade_wear_index':    {'mean': 0.85, 'std': 0.1},
+            'spindle_current':     {'mean': 4.0, 'std': 0.2},
+            'vibration_amplitude': {'mean': 2.5, 'std': 0.2},
+            'blade_wear_index':    {'mean': 0.99, 'std': 0.01},
         }
     },
 }
@@ -208,7 +210,10 @@ def compute_cumulative_rrs(prev_rrs, stage_rrs):
     return np.clip(cumulative, 0.0, 1.0)
 
 def pick_machine(stage_name, archetype_info):
-    if archetype_info.get('uses_degraded_machines') and stage_name in DEGRADED:
+    stage_idx_map = {'die_bonder': 1, 'wire_bonder': 2, 'mold_press': 3, 'ball_attach': 4, 'saw': 5}
+    is_root_stage = archetype_info.get('root_stage') == stage_idx_map.get(stage_name)
+    
+    if (archetype_info.get('uses_degraded_machines') or is_root_stage) and stage_name in DEGRADED:
         if np.random.rand() < 0.8:
             return np.random.choice(DEGRADED[stage_name])
     return np.random.choice(MACHINE_POOLS[stage_name])
@@ -223,7 +228,7 @@ def assign_bin(arch_name, archetype_info, is_defective):
         elif arch_name == 'marginal_drift':
             return 1 if rand < 0.60 else (2 if rand < 0.85 else 3)
         else: # batch_variation
-            return 1 if rand < 0.70 else (2 if rand < 0.90 else 3)
+            return 1 if rand < 0.127 else (2 if rand < 0.464 else 3)
     else:
         if 'target_bins' in archetype_info:
             return np.random.choice(archetype_info['target_bins'], p=archetype_info['bin_weights'])
@@ -315,19 +320,22 @@ for i in range(N_HEALTHY):
         print(f"  {i} / {N_HEALTHY}")
 
 print("Generating defective units...")
+defect_choices = np.random.choice(
+    list(DEFECT_ARCHETYPES.keys()),
+    size=N_DEFECTIVE,
+    p=[a['weight'] for a in DEFECT_ARCHETYPES.values()]
+)
 defect_idx = N_HEALTHY
-for arch_name, arch in DEFECT_ARCHETYPES.items():
-    count = int(N_DEFECTIVE * arch['weight'])
-    for i in range(count):
-        records.append(generate_record(defect_idx + i, arch_name, arch, True))
-    defect_idx += count
-
-while defect_idx < TOTAL_UNITS:
-    records.append(generate_record(defect_idx, 'void_delamination', DEFECT_ARCHETYPES['void_delamination'], True))
-    defect_idx += 1
+for i in range(N_DEFECTIVE):
+    arch_name = defect_choices[i]
+    records.append(generate_record(defect_idx + i, arch_name, DEFECT_ARCHETYPES[arch_name], True))
 
 print("Converting to DataFrame...")
 df = pd.DataFrame(records)
+
+# Free up the massive list of dictionaries from memory!
+del records
+gc.collect()
 
 # --- STEP 6: COMPUTE MACHINE RISK SCORE ---
 print("Computing empirical machine risk scores...")
@@ -416,6 +424,16 @@ print(df.groupby('is_defective')['rrs_5'].mean())
 # --- STEP 10: SAVE ---
 print("\nSaving files...")
 os.makedirs('data', exist_ok=True)
+
+# Update df_machines with computed scores before saving
+risk_mapping = df.drop_duplicates('machine_db').set_index('machine_db')['machine_db_risk'].to_dict()
+risk_mapping.update(df.drop_duplicates('machine_wb').set_index('machine_wb')['machine_wb_risk'].to_dict())
+risk_mapping.update(df.drop_duplicates('machine_mp').set_index('machine_mp')['machine_mp_risk'].to_dict())
+risk_mapping.update(df.drop_duplicates('machine_ba').set_index('machine_ba')['machine_ba_risk'].to_dict())
+risk_mapping.update(df.drop_duplicates('machine_sw').set_index('machine_sw')['machine_sw_risk'].to_dict())
+
+df_machines['machine_risk_score'] = df_machines['machine_id'].map(risk_mapping).fillna(0.0).round(3)
+
 df[FINAL_COLUMNS].to_csv('data/synthetic_backend_assembly.csv', index=False, chunksize=50000)
 df_machines.to_csv('data/machines.csv', index=False)
 print("Done! Data saved to 'data' directory.")
