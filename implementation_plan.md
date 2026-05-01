@@ -25,20 +25,19 @@
 
 ### 2.1 Scale and Class Distribution
 
-```
-TOTAL_UNITS       = 2,000,000  (matches FraudShieldAI scale)
+TOTAL_UNITS       = 200,000  (matches scalable architecture limit)
 YIELD_TARGET      = 92%  (industry realistic for backend assembly)
 
-Bin 1 (Prime):              75%  = 1,500,000 units
-Bin 2 (Speed Downgrade):    10%  =   200,000
-Bin 3 (Capacity Downgrade):  7%  =   140,000
+Bin 1 (Prime):              75%  = 150,000 units
+Bin 2 (Speed Downgrade):    10%  =   20,000
+Bin 3 (Capacity Downgrade):  7%  =   14,000
 --- Sellable total: 92% ---
-Bin 4 (Logic/Fab Defect):    1.5% =  30,000  (not packaging-caused)
-Bin 5 (High-Temp Fail):      1.5% =  30,000  (Stage 3 mold voids)
-Bin 6 (DC Gross Leakage):    1.5% =  30,000  (Stage 1 die bond cracks)
-Bin 7 (Open Circuit):        1.5% =  30,000  (Stage 2/4 wire issues)
-Bin 8 (Short Circuit):       1.0% =  20,000  (Stage 3/5 bridging)
---- Scrap total: 8% = 160,000 units ---
+Bin 4 (Logic/Fab Defect):    1.5% =   3,000  (not packaging-caused)
+Bin 5 (High-Temp Fail):      1.5% =   3,000  (Stage 3 mold voids)
+Bin 6 (DC Gross Leakage):    1.5% =   3,000  (Stage 1 die bond cracks)
+Bin 7 (Open Circuit):        1.5% =   3,000  (Stage 2/4 wire issues)
+Bin 8 (Short Circuit):       2.0% =   4,000  (Stage 3/5 bridging)
+--- Scrap total: 8% = 16,000 units ---
 ```
 
 ### 2.2 Machine and Tool Pools (Mirrors FraudShieldAI Account Pools)
@@ -151,7 +150,6 @@ HEALTHY_ARCHETYPES = {
     'marginal_drift': {
         'weight': 0.15,  # 15% — machine is drifting but parts still pass
         'description': 'Gradual tool wear causing parameter drift',
-        'uses_degraded_machines': True,
         # Parameters have wider std and shifted means
     },
 
@@ -170,14 +168,14 @@ HEALTHY_ARCHETYPES = {
 DEFECT_ARCHETYPES = {
 
     'void_delamination': {
-        'weight': 0.25,  # maps to Bin 6 (DC Gross Leakage)
+        'weight': 0.1875,  # maps to Bin 6 (DC Gross Leakage)
         'target_bin': 6,
-        'root_cause_stage': 1,  # Die Bond
+        'root_stage': 1,  # Die Bond
         'description': 'Epoxy void or delamination from die bond issues',
         'stage1': {
-            'bond_force':          {'mean': 22.0, 'std': 3.0},   # too low
-            'xy_placement_offset': {'mean': 12.0, 'std': 4.0},   # misaligned
-            'bond_line_thickness': {'mean': 15.0, 'std': 3.0},   # too thin
+            'bond_force':          {'mean': 8.0, 'std': 1.0},   # too low
+            'xy_placement_offset': {'mean': 30.0, 'std': 2.0},   # misaligned
+            'bond_line_thickness': {'mean': 5.0, 'std': 1.0},   # too thin
         },
         'stage2': 'inherit_nominal',  # Stage 2 looks normal
         'stage3': 'inherit_nominal',  # Stage 3 looks normal
@@ -185,76 +183,76 @@ DEFECT_ARCHETYPES = {
     },
 
     'wire_non_stick': {
-        'weight': 0.25,  # maps to Bin 7 (Open Circuit)
+        'weight': 0.03125,  # maps to Bin 7 (Open Circuit)
         'target_bin': 7,
-        'root_cause_stage': 2,  # Wire Bond
+        'root_stage': 2,  # Wire Bond
         'description': 'Wire bond non-stick or lift-off',
         'stage1': 'inherit_nominal',
         'stage2': {
-            'ultrasonic_power':       {'mean': 0.85, 'std': 0.1},  # too low
-            'bond_time':              {'mean': 11,   'std': 1.5},  # too short
-            'loop_height':            {'mean': 240,  'std': 15},   # too high
-            'capillary_stroke_count': {'mean': 350000, 'std': 50000}, # worn
+            'ultrasonic_power':       {'mean': 0.2, 'std': 0.05},  # too low
+            'bond_time':              {'mean': 2.0,   'std': 0.5},  # too short
+            'loop_height':            {'mean': 350,  'std': 10},   # too high
+            'capillary_stroke_count': {'mean': 550000, 'std': 20000}, # worn
         },
     },
 
     'wire_sweep': {
-        'weight': 0.10,  # maps to Bin 8 (Short Circuit)
+        'weight': 0.1250,  # maps to Bin 8 (Short Circuit)
         'target_bin': 8,
-        'root_cause_stage': 3,  # Mold — high pressure pushes wires sideways
+        'root_stage': 3,  # Mold — high pressure pushes wires sideways
         'description': 'High transfer pressure sweeps dense wires until they touch',
         'stage3': {
-            'transfer_pressure':   {'mean': 9.8,  'std': 0.3},  # TOO HIGH
-            'clamping_force':      {'mean': 55,   'std': 3.0},  # high (contributes)
-            'molding_temperature': {'mean': 182,  'std': 3.0},  # normal-ish
-            'vacuum_level':        {'mean': 4.0,  'std': 1.5},  # decent vacuum
+            'transfer_pressure':   {'mean': 15.0,  'std': 0.5},  # TOO HIGH
+            'clamping_force':      {'mean': 75,   'std': 2.0},  # high (contributes)
+            'molding_temperature': {'mean': 180,  'std': 3.0},  # normal-ish
+            'vacuum_level':        {'mean': 5.0,  'std': 1.5},  # decent vacuum
         },
     },
 
     'popcorn_delamination': {
-        'weight': 0.10,  # maps to Bin 5 (High-Temp) or Bin 7 (Open Circuit)
+        'weight': 0.3125,  # maps to Bin 5 (High-Temp) or Bin 7 (Open Circuit)
         'target_bins': [5, 7],
         'target_bin_weights': [0.6, 0.4],
-        'root_cause_stage': 3,  # Mold — trapped moisture voids explode at reflow
+        'root_stage': 3,  # Mold — trapped moisture voids explode at reflow
         'description': 'Poor vacuum traps moisture; voids explode at reflow, ripping wires',
         'stage3': {
-            'transfer_pressure':   {'mean': 7.5,  'std': 0.8},  # normal
-            'clamping_force':      {'mean': 45,   'std': 4.0},  # slightly low
-            'molding_temperature': {'mean': 173,  'std': 3.0},  # TOO LOW → incomplete cure
-            'vacuum_level':        {'mean': 8.5,  'std': 1.0},  # POOR → traps moisture
+            'transfer_pressure':   {'mean': 8.0,  'std': 0.8},  # normal
+            'clamping_force':      {'mean': 50,   'std': 4.0},  # slightly low
+            'molding_temperature': {'mean': 130,  'std': 3.0},  # TOO LOW → incomplete cure
+            'vacuum_level':        {'mean': 25.0,  'std': 2.0},  # POOR → traps moisture
         },
         'uses_bad_resin': True,  # bad resin absorbs more moisture
     },
 
     'thermal_fracture': {
-        'weight': 0.15,  # maps to Bin 7 (Open Circuit)
+        'weight': 0.03125,  # maps to Bin 7 (Open Circuit)
         'target_bin': 7,
-        'root_cause_stage': 4,  # Ball Attach
+        'root_stage': 4,  # Ball Attach
         'stage4': {
-            'reflow_peak_temp':       {'mean': 268, 'std': 3.0},  # too hot
-            'ball_placement_accuracy': {'mean': 18,  'std': 5.0},  # misaligned
+            'reflow_peak_temp':       {'mean': 310, 'std': 3.0},  # too hot
+            'ball_placement_accuracy': {'mean': 40.0,  'std': 3.0},  # misaligned
         },
     },
 
     'ball_bridge_saw_damage': {
-        'weight': 0.10,  # maps to Bin 8 (Short Circuit)
+        'weight': 0.1250,  # maps to Bin 8 (Short Circuit)
         'target_bin': 8,
-        'root_cause_stage': 5,  # Saw or Ball Attach
+        'root_stage': 5,  # Saw or Ball Attach
         'stage4': {
-            'ball_placement_accuracy': {'mean': 20, 'std': 5.0},  # offset
-            'flux_density':            {'mean': 1.05, 'std': 0.1}, # excess
+            'ball_placement_accuracy': {'mean': 45.0, 'std': 4.0},  # offset
+            'flux_density':            {'mean': 1.8, 'std': 0.1}, # excess
         },
         'stage5': {
-            'spindle_current':      {'mean': 2.4, 'std': 0.2},  # high
-            'vibration_amplitude':  {'mean': 1.2, 'std': 0.3},  # excessive
-            'blade_wear_index':     {'mean': 0.85, 'std': 0.1}, # worn blade
+            'spindle_current':      {'mean': 4.0, 'std': 0.2},  # high
+            'vibration_amplitude':  {'mean': 2.5, 'std': 0.2},  # excessive
+            'blade_wear_index':     {'mean': 0.99, 'std': 0.01}, # worn blade
         },
     },
 
     'fab_defect_passthrough': {
-        'weight': 0.05,  # maps to Bin 4 (Logic Failure — fab, not packaging)
+        'weight': 0.1875,  # maps to Bin 4 (Logic Failure — fab, not packaging)
         'target_bin': 4,
-        'root_cause_stage': 0,  # Pre-existing silicon defect
+        'root_stage': 0,  # Pre-existing silicon defect
         # ALL stages look perfectly nominal — defect is invisible to packaging
         'all_stages': 'inherit_nominal',
     },
@@ -368,26 +366,9 @@ After each stage's own RRS is computed, it is folded into the running cumulative
 
 ```python
 def compute_cumulative_rrs(prev_rrs: float, stage_rrs: float) -> float:
-    """
-    Combines the previous cumulative RRS with the current stage's RRS.
-    The interaction term is the key — it makes two small deviations
-    compound into disproportionate risk (tolerance stacking).
-
-    Components:
-      prev_rrs  * 0.6  → inherited stress from all previous stages (60% weight)
-      stage_rrs * 0.3  → new stress from this stage (30% weight)
-      interaction * 0.1 → compounding penalty (10% weight, amplified by 1.5x)
-
-    Example:
-      prev_rrs=0.3, stage_rrs=0.3 → interaction=0.3*0.3*1.5=0.135
-      cumulative = 0.3*0.6 + 0.3*0.3 + 0.135*0.1 = 0.18 + 0.09 + 0.0135 = 0.2835
-
-      prev_rrs=0.7, stage_rrs=0.7 → interaction=0.7*0.7*1.5=0.735
-      cumulative = 0.7*0.6 + 0.7*0.3 + 0.735*0.1 = 0.42 + 0.21 + 0.0735 = 0.7035
-      (high prev + high current → risk accelerates)
-    """
-    interaction = prev_rrs * stage_rrs * 1.5
-    cumulative = prev_rrs * 0.6 + stage_rrs * 0.3 + interaction * 0.1
+    """True accumulation: risk can only grow, never shrink.
+    Dampening factor 0.5 prevents healthy units from saturating at 1.0."""
+    cumulative = prev_rrs + stage_rrs * (1 - prev_rrs) * 0.5
     return np.clip(cumulative, 0.0, 1.0)
 ```
 
@@ -407,11 +388,12 @@ After all 5 stages, each unit has:
 
 ```
 23 raw features (from stages 1-5)
+ 5 categorical metadata (`unit_id`, `resin_batch_id`, etc.)
  5 per-stage RRS scores (rrs_1 through rrs_5)
  5 stage_rrs_delta values (how much risk increased at each stage)
- 1 machine_risk_score (aggregate risk of the machines used)
- 1 resin_batch_risk_score (batch effect)
--- Total: 34 features + bin_code target --
+ 2 empirical risk features (`machine_risk_score`, `resin_batch_risk_score`)
+ 1 binary ground truth target (`is_defective`)
+-- Total: 41 features + 1 target classification column (`bin_code`) = 42 columns --
 ```
 
 ---

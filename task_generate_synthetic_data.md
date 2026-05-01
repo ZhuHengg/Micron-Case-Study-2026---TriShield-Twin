@@ -18,9 +18,9 @@ data/synthetic_backend_assembly.csv      # 2M rows x 34+ features (single flat C
 ## CONSTANTS
 
 ```python
-TOTAL_UNITS    = 2_000_000
-N_HEALTHY      = 1_840_000   # 92% yield
-N_DEFECTIVE    = 160_000     # 8% scrap
+TOTAL_UNITS    = 200_000
+N_HEALTHY      = 184_000   # 92% yield
+N_DEFECTIVE    =  16_000   # 8% scrap
 RANDOM_SEED    = 42
 
 # Bin distribution within N_HEALTHY
@@ -29,11 +29,11 @@ BIN_2_COUNT =   200_000  # 10% Speed Downgrade
 BIN_3_COUNT =   140_000  #  7% Capacity Downgrade
 
 # Bin distribution within N_DEFECTIVE
-BIN_4_COUNT =  30_000    # 1.5% Logic/Fab Defect
-BIN_5_COUNT =  30_000    # 1.5% High-Temp Fail
-BIN_6_COUNT =  30_000    # 1.5% DC Gross Leakage
-BIN_7_COUNT =  30_000    # 1.5% Open Circuit
-BIN_8_COUNT =  20_000    # 1.0% Short Circuit
+BIN_4_COUNT =  3_000     # 1.5% Logic/Fab Defect
+BIN_5_COUNT =  3_000     # 1.5% High-Temp Fail
+BIN_6_COUNT =  3_000     # 1.5% DC Gross Leakage
+BIN_7_COUNT =  3_000     # 1.5% Open Circuit
+BIN_8_COUNT =  4_000     # 2.0% Short Circuit
 ```
 
 ---
@@ -78,7 +78,7 @@ Each archetype defines `{'mean': float, 'std': float}` per parameter per stage.
 HEALTHY_ARCHETYPES = {
     'nominal_optimal':     {'weight': 0.50, ...},  # Bin 1
     'nominal_edge':        {'weight': 0.25, ...},  # Bin 1 or 2
-    'marginal_drift':      {'weight': 0.15, 'uses_degraded_machines': True, ...},  # Bin 1/2/3
+    'marginal_drift':      {'weight': 0.15, ...},  # Bin 1/2/3
     'batch_variation':     {'weight': 0.10, 'uses_bad_resin': 0.30, ...},  # Bin 1/2/3
 }
 ```
@@ -93,13 +93,13 @@ HEALTHY_ARCHETYPES = {
 
 ```python
 DEFECT_ARCHETYPES = {
-    'void_delamination':      {'weight': 0.19, 'target_bin': 6, 'root_stage': 1},
-    'wire_non_stick':         {'weight': 0.19, 'target_bin': 7, 'root_stage': 2},
-    'wire_sweep':             {'weight': 0.12, 'target_bin': 8, 'root_stage': 3},  # HIGH pressure
-    'popcorn_delamination':   {'weight': 0.12, 'target_bins': [5,7], 'bin_weights': [0.6,0.4], 'root_stage': 3},  # POOR vacuum
-    'thermal_fracture':       {'weight': 0.15, 'target_bin': 7, 'root_stage': 4},
-    'ball_bridge_saw':        {'weight': 0.11, 'target_bin': 8, 'root_stage': 5},
-    'fab_defect_passthrough': {'weight': 0.12, 'target_bin': 4, 'root_stage': 0},
+    'void_delamination':      {'weight': 0.1875, 'target_bin': 6, 'root_stage': 1},
+    'wire_non_stick':         {'weight': 0.03125, 'target_bin': 7, 'root_stage': 2},
+    'wire_sweep':             {'weight': 0.1250, 'target_bin': 8, 'root_stage': 3},  # HIGH pressure
+    'popcorn_delamination':   {'weight': 0.3125, 'target_bins': [5,7], 'bin_weights': [0.6,0.4], 'root_stage': 3},  # POOR vacuum
+    'thermal_fracture':       {'weight': 0.03125, 'target_bin': 7, 'root_stage': 4},
+    'ball_bridge_saw':        {'weight': 0.1250, 'target_bin': 8, 'root_stage': 5},
+    'fab_defect_passthrough': {'weight': 0.1875, 'target_bin': 4, 'root_stage': 0},
 }
 # Weights sum to 1.0. Actual counts controlled by BIN_X_COUNT constants.
 ```
@@ -184,8 +184,8 @@ def compute_rrs_stage5(unit: dict) -> float:
 
 ```python
 def compute_cumulative_rrs(prev_rrs: float, stage_rrs: float) -> float:
-    interaction = prev_rrs * stage_rrs * 1.5
-    cumulative = prev_rrs * 0.6 + stage_rrs * 0.3 + interaction * 0.1
+    """True accumulation: risk can only grow, never shrink."""
+    cumulative = prev_rrs + stage_rrs * (1 - prev_rrs) * 0.5
     return np.clip(cumulative, 0.0, 1.0)
 ```
 

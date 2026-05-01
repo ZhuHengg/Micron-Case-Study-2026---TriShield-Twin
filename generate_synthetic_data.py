@@ -8,7 +8,7 @@ np.random.seed(42)
 
 # --- CONSTANTS ---
 TOTAL_UNITS = 200_000
-N_HEALTHY   = 184_000   # 92%
+N_HEALTHY   = 184_000    # 92%
 N_DEFECTIVE = 16_000     # 8%
 
 print(f"Starting generation of {TOTAL_UNITS} units...")
@@ -53,7 +53,7 @@ df_machines = pd.DataFrame(machines_data)
 HEALTHY_ARCHETYPES = {
     'nominal_optimal':     {'weight': 0.50},
     'nominal_edge':        {'weight': 0.25},
-    'marginal_drift':      {'weight': 0.15, 'uses_degraded_machines': True},
+    'marginal_drift':      {'weight': 0.15},
     'batch_variation':     {'weight': 0.10, 'uses_bad_resin': 0.30},
 }
 
@@ -206,17 +206,24 @@ def compute_rrs_stage5(unit):
     return np.clip(raw, 0.0, 1.0)
 
 def compute_cumulative_rrs(prev_rrs, stage_rrs):
-    interaction = prev_rrs * stage_rrs * 1.5
-    cumulative = prev_rrs * 0.6 + stage_rrs * 0.3 + interaction * 0.1
+    """True accumulation: risk can only grow, never shrink.
+    Dampening factor 0.5 prevents healthy units from saturating at 1.0."""
+    cumulative = prev_rrs + stage_rrs * (1 - prev_rrs) * 0.5
     return np.clip(cumulative, 0.0, 1.0)
 
 def pick_machine(stage_name, archetype_info):
     stage_idx_map = {'die_bonder': 1, 'wire_bonder': 2, 'mold_press': 3, 'ball_attach': 4, 'saw': 5}
     is_root_stage = archetype_info.get('root_stage') == stage_idx_map.get(stage_name)
     
-    if (archetype_info.get('uses_degraded_machines') or is_root_stage) and stage_name in DEGRADED:
-        if np.random.rand() < 0.8:
-            return np.random.choice(DEGRADED[stage_name])
+    if stage_name in DEGRADED:
+        # Defect archetypes: 85% chance on degraded machine at the root cause stage
+        if is_root_stage:
+            if np.random.rand() < 0.85:
+                return np.random.choice(DEGRADED[stage_name])
+        # Marginal drift: 30% chance on any degraded machine (lower to avoid dilution)
+        elif archetype_info.get('uses_degraded_machines'):
+            if np.random.rand() < 0.30:
+                return np.random.choice(DEGRADED[stage_name])
     return np.random.choice(MACHINE_POOLS[stage_name])
 
 def assign_bin(arch_name, archetype_info, is_defective):
@@ -356,7 +363,13 @@ for stage_col in ['machine_db', 'machine_wb', 'machine_mp', 'machine_ba', 'machi
     machine_stats[signals] = scaler.fit_transform(machine_stats[signals])
 
     # Combine the scaled signals using empirical correlation with defect outcome
-    risk_map = dict(zip(machine_stats[stage_col], machine_stats['defect_rate']))
+    machine_stats['risk'] = (
+        machine_stats['defect_rate'] * 0.40 +
+        machine_stats['avg_rrs']     * 0.35 +
+        machine_stats['max_rrs']     * 0.25
+    ).clip(0, 1).round(3)
+    
+    risk_map = dict(zip(machine_stats[stage_col], machine_stats['risk']))
     df[f'{stage_col}_risk'] = df[stage_col].map(risk_map)
 
 stage_risk_cols = ['machine_db_risk', 'machine_wb_risk', 'machine_mp_risk',
@@ -387,13 +400,6 @@ df['resin_batch_risk_score'] = df['resin_batch_id'].map(resin_map).round(3)
 
 # --- STEP 7: INJECT NOISE ---
 print("\nInjecting noise...")
-noise_idx_1 = df[df['is_defective']==0].sample(frac=0.08).index
-for stg, p_name in zip(
-    ['machine_db', 'machine_wb', 'machine_mp', 'machine_ba', 'machine_sw'],
-    ['die_bonder', 'wire_bonder', 'mold_press', 'ball_attach', 'saw']
-):
-    df.loc[noise_idx_1, stg] = [np.random.choice(DEGRADED[p_name]) for _ in range(len(noise_idx_1))]
-
 # Add subtle noise to risk scores to prevent perfect boundaries
 mrs_noise = np.random.normal(0, 0.03, len(df))
 df['machine_risk_score'] = (df['machine_risk_score'] + mrs_noise).clip(0, 1).round(3)
@@ -416,7 +422,7 @@ FINAL_COLUMNS = [
     'rrs_delta_1', 'rrs_delta_2', 'rrs_delta_3', 'rrs_delta_4', 'rrs_delta_5',
     'machine_risk_score', 'resin_batch_risk_score',
     'machine_db', 'machine_wb', 'machine_mp', 'machine_ba', 'machine_sw',
-    'bin_code',
+    'bin_code', 'is_defective',
 ]
 
 # --- STEP 9: SANITY CHECKS ---
@@ -431,14 +437,18 @@ print(df.groupby('is_defective')['rrs_5'].mean())
 print("\nSaving files...")
 os.makedirs('data', exist_ok=True)
 
-# Update df_machines with computed scores before saving
-risk_mapping = df.drop_duplicates('machine_db').set_index('machine_db')['machine_db_risk'].to_dict()
-risk_mapping.update(df.drop_duplicates('machine_wb').set_index('machine_wb')['machine_wb_risk'].to_dict())
-risk_mapping.update(df.drop_duplicates('machine_mp').set_index('machine_mp')['machine_mp_risk'].to_dict())
-risk_mapping.update(df.drop_duplicates('machine_ba').set_index('machine_ba')['machine_ba_risk'].to_dict())
-risk_mapping.update(df.drop_duplicates('machine_sw').set_index('machine_sw')['machine_sw_risk'].to_dict())
-
-df_machines['machine_risk_score'] = df_machines['machine_id'].map(risk_mapping).fillna(0.0).round(3)
+# Save machine risk scores BEFORE noise injection corrupts the per-stage risk columns
+# Use the clean per-stage risk computed in Step 6
+for stage_col, stage_name in [('machine_db','die_bonder'), ('machine_wb','wire_bonder'),
+                               ('machine_mp','mold_press'), ('machine_ba','ball_attach'),
+                               ('machine_sw','saw')]:
+    risk_col = f'{stage_col}_risk'
+    # Get unique machine -> risk mapping (all rows for same machine have same risk)
+    stage_risk = df.groupby(stage_col)[risk_col].first()
+    stage_machines = df_machines[df_machines['machine_type'] == stage_name]
+    df_machines.loc[stage_machines.index, 'machine_risk_score'] = (
+        stage_machines['machine_id'].map(stage_risk).fillna(0.0).round(3).values
+    )
 
 df[FINAL_COLUMNS].to_csv('data/synthetic_backend_assembly.csv', index=False, chunksize=50000)
 df_machines.to_csv('data/machines.csv', index=False)
