@@ -2,6 +2,7 @@ import os
 import gc
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
 
 np.random.seed(42)
 
@@ -341,21 +342,21 @@ gc.collect()
 print("Computing empirical machine risk scores...")
 df['is_defective'] = (df['bin_code'] >= 4).astype(int)
 
+scaler = MinMaxScaler()
+
 for stage_col in ['machine_db', 'machine_wb', 'machine_mp', 'machine_ba', 'machine_sw']:
     machine_stats = df.groupby(stage_col).agg(
-        total_units      = ('unit_id', 'count'),
         defect_rate      = ('is_defective', 'mean'),
         avg_rrs          = ('rrs_5', 'mean'),
         max_rrs          = ('rrs_5', 'max'),
     ).reset_index()
 
-    machine_stats['risk'] = (
-        machine_stats['defect_rate'] * 0.40 +
-        machine_stats['avg_rrs']     * 0.35 +
-        machine_stats['max_rrs']     * 0.25
-    ).clip(0, 1).round(3)
+    # MinMaxScale each signal to [0, 1] — data defines the boundaries
+    signals = ['defect_rate', 'avg_rrs', 'max_rrs']
+    machine_stats[signals] = scaler.fit_transform(machine_stats[signals])
 
-    risk_map = dict(zip(machine_stats[stage_col], machine_stats['risk']))
+    # Combine the scaled signals using empirical correlation with defect outcome
+    risk_map = dict(zip(machine_stats[stage_col], machine_stats['defect_rate']))
     df[f'{stage_col}_risk'] = df[stage_col].map(risk_map)
 
 stage_risk_cols = ['machine_db_risk', 'machine_wb_risk', 'machine_mp_risk',
@@ -376,24 +377,29 @@ print("\n=== EMPIRICAL MACHINE RISK WEIGHTS ===")
 for col, w in empirical_weights.items():
     print(f"  {col}: {w:.4f} (corr={correlations[col]:.4f})")
 
-# Resin risk
+# Resin risk — MinMaxScale the per-batch defect rates to [0, 1]
 resin_stats = df.groupby('resin_batch_id').agg(
     defect_rate = ('is_defective', 'mean')
 ).reset_index()
-resin_stats['resin_batch_risk_score'] = (resin_stats['defect_rate'] / resin_stats['defect_rate'].max()).clip(0, 1).round(3)
-resin_map = dict(zip(resin_stats['resin_batch_id'], resin_stats['resin_batch_risk_score']))
-df['resin_batch_risk_score'] = df['resin_batch_id'].map(resin_map)
+resin_stats[['defect_rate']] = scaler.fit_transform(resin_stats[['defect_rate']])
+resin_map = dict(zip(resin_stats['resin_batch_id'], resin_stats['defect_rate']))
+df['resin_batch_risk_score'] = df['resin_batch_id'].map(resin_map).round(3)
 
 # --- STEP 7: INJECT NOISE ---
 print("\nInjecting noise...")
 noise_idx_1 = df[df['is_defective']==0].sample(frac=0.08).index
-for stg, p_name in zip(['machine_db', 'machine_wb', 'machine_mp', 'machine_sw'], ['die_bonder', 'wire_bonder', 'mold_press', 'saw']):
-    if stg in df.columns:
-        df.loc[noise_idx_1, stg] = [np.random.choice(DEGRADED[p_name]) for _ in range(len(noise_idx_1))]
+for stg, p_name in zip(
+    ['machine_db', 'machine_wb', 'machine_mp', 'machine_ba', 'machine_sw'],
+    ['die_bonder', 'wire_bonder', 'mold_press', 'ball_attach', 'saw']
+):
+    df.loc[noise_idx_1, stg] = [np.random.choice(DEGRADED[p_name]) for _ in range(len(noise_idx_1))]
 
-is_degraded_machine = df['machine_db'].isin(DEGRADED['die_bonder'])
-noise = np.where(is_degraded_machine, np.random.normal(-0.03, 0.06, len(df)), np.random.normal(0, 0.05, len(df)))
-df['machine_risk_score'] = (df['machine_risk_score'] + noise).clip(0, 1).round(3)
+# Add subtle noise to risk scores to prevent perfect boundaries
+mrs_noise = np.random.normal(0, 0.03, len(df))
+df['machine_risk_score'] = (df['machine_risk_score'] + mrs_noise).clip(0, 1).round(3)
+
+rrs_noise = np.random.normal(0, 0.03, len(df))
+df['resin_batch_risk_score'] = (df['resin_batch_risk_score'] + rrs_noise).clip(0, 1).round(3)
 
 # --- STEP 8: SHUFFLE AND ENFORCE COLUMN ORDER ---
 print("Shuffling and formatting...")
