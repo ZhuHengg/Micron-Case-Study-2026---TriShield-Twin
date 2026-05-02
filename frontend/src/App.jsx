@@ -4,6 +4,7 @@ import Sidebar from './components/layout/Sidebar'
 import Dashboard from './pages/Dashboard'
 import UnitInvestigation from './pages/UnitInvestigation'
 import TriLayerInsights from './pages/TriLayerInsights'
+import PhysicsInsights from './pages/PhysicsInsights'
 import Tuning from './pages/Tuning'
 import clsx from 'clsx'
 
@@ -17,7 +18,8 @@ function App() {
   const tabNames = {
     dashboard: 'Yield Dashboard',
     investigation: 'Unit Investigation',
-    insights: 'Physics Insights',
+    insights: 'Model Insights',
+    physics: 'Physics Sandbox',
     tuning: 'Tuning'
   }
 
@@ -68,6 +70,7 @@ function App() {
           {activeTab === 'dashboard' && <Dashboard engine={engine} onRiskUpdate={setDashboardRisk} />}
           {activeTab === 'investigation' && <div className="h-full"><UnitInvestigation /></div>}
           {activeTab === 'insights' && <div className="p-6"><TriLayerInsights engine={engine} /></div>}
+          {activeTab === 'physics' && <div className="p-6"><PhysicsInsights engine={engine} /></div>}
           {activeTab === 'tuning' && <Tuning />}
         </main>
       </div>

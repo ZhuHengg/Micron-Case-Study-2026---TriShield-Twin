@@ -6,7 +6,8 @@ const PAGE_TITLES = {
   dashboard: 'Yield Dashboard',
   investigation: 'Unit Investigation',
   radar: 'Risk Radar',
-  insights: 'Physics Insights',
+  insights: 'Model Insights',
+  physics: 'Physics Sandbox',
   lab: 'Yield Tuning Lab',
 }
 

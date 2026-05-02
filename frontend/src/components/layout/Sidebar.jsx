@@ -1,12 +1,13 @@
 import React from 'react'
-import { ShieldCheck, LayoutDashboard, Search, ShieldAlert, Settings } from 'lucide-react'
+import { ShieldCheck, LayoutDashboard, Search, ShieldAlert, Settings, Zap } from 'lucide-react'
 import clsx from 'clsx'
 
 export default function Sidebar({ activeTab, setActiveTab }) {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'investigation', label: 'Investigation', icon: Search },
-    { id: 'insights', label: 'Physics Insights', icon: ShieldAlert },
+    { id: 'insights', label: 'Model Insights', icon: ShieldAlert },
+    { id: 'physics', label: 'Physics Sandbox', icon: Zap },
     { id: 'tuning', label: 'Tuning', icon: Settings },
   ]
 

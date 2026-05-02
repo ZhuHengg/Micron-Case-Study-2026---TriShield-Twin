@@ -1,375 +1,333 @@
-import React, { useState, useMemo } from 'react';
-import { Activity, AlertTriangle, ShieldCheck, Zap, Server, SlidersHorizontal, Cpu, BookOpen } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer, BarChart, Bar, Cell, YAxis as BarYAxis, XAxis as BarXAxis, LabelList } from 'recharts';
-import clsx from 'clsx';
-import Panel from '../components/shared/Panel';
+import React, { useState, useMemo } from 'react'
+import { Activity, AlertTriangle, ShieldCheck, Play, Pause, Zap, RefreshCw, Search, Target, Scale } from 'lucide-react'
+import clsx from 'clsx'
+import Panel from '../components/shared/Panel'
+import { pearsonCorrelation, calcAgreementMatrix, rescore, calcMetrics, PHYSICS_RULES, FEATURE_MAP } from '../utils/modelAnalytics'
 
 export default function TriLayerInsights({ engine }) {
-  // Sandbox State
-  const [moldingTemp, setMoldingTemp] = useState(175);
-  const [vacuumLevel, setVacuumLevel] = useState(95);
-  const [transferPressure, setTransferPressure] = useState(10);
+  const allUnits = engine?.allUnits || []
+  const { isRunning, setIsRunning, triggerExcursionBurst, resetParams } = engine || {}
 
-  // Dynamic Prediction Logic
-  const predictedCRI = useMemo(() => {
-    let cri = 0.3; // Default baseline
-    cri += (moldingTemp - 175) * 0.015;
-    cri += (95 - vacuumLevel) * 0.01;
-    cri += (transferPressure - 10) * 0.02;
-    return Math.max(0, Math.min(1.0, cri));
-  }, [moldingTemp, vacuumLevel, transferPressure]);
+  const [weights, setWeights] = useState({ lgb: 0.55, iso: 0.25, beh: 0.20 })
+  const [thresholds, setThresholds] = useState({ approve: 35, block: 65 })
 
-  const isCritical = predictedCRI > 0.6;
+  const handleWeightChange = (key, value) => {
+    let nv = Math.max(0, Math.min(100, value)) / 100
+    setWeights(prev => {
+      const others = Object.keys(prev).filter(k => k !== key)
+      const delta = nv - prev[key]
+      const oSum = prev[others[0]] + prev[others[1]]
+      const next = { ...prev, [key]: nv }
+      if (oSum === 0) { next[others[0]] = (1 - nv) / 2; next[others[1]] = (1 - nv) / 2 }
+      else { next[others[0]] = Math.max(0, prev[others[0]] - delta * (prev[others[0]] / oSum)); next[others[1]] = Math.max(0, prev[others[1]] - delta * (prev[others[1]] / oSum)) }
+      const tot = next.lgb + next.iso + next.beh
+      return { lgb: next.lgb / tot, iso: next.iso / tot, beh: next.beh / tot }
+    })
+  }
 
-  // Component B: CRI Lifecycle Data
-  const criData = useMemo(() => [
-    { stage: 'Die Bond', cri: 0.1 },
-    { stage: 'Wire Bond', cri: 0.15 },
-    { stage: 'Mold', cri: 0.15 + (predictedCRI - 0.3) * 0.4 },
-    { stage: 'Ball Attach', cri: 0.2 + (predictedCRI - 0.3) * 0.7 },
-    { stage: 'Saw Singulation', cri: predictedCRI },
-  ].map(d => ({ ...d, cri: Math.max(0, Math.min(1, d.cri)) })), [predictedCRI]);
+  // Top stats
+  const topStats = useMemo(() => {
+    const lgbAvg = allUnits.length ? allUnits.reduce((s, t) => s + (t.lgbScore || 0), 0) / allUnits.length : 0
+    const isoRate = allUnits.length ? allUnits.filter(t => (t.isoScore || 0) > 0.5).length / allUnits.length : 0
+    const behRate = allUnits.length ? allUnits.filter(t => (t.behScore || 0) > 0.2).length / allUnits.length : 0
+    const disRate = allUnits.length ? allUnits.filter(t => Math.abs((t.lgbScore || 0) - (t.isoScore || 0)) > 0.3).length / allUnits.length : 0
+    return { lgbAvg, isoRate, behRate, disRate }
+  }, [allUnits])
 
-  // Component C: Root Cause Data
-  const rootCauseData = [
-    { name: 'Molding Temp', value: 42, color: '#ef4444' },
-    { name: 'Vacuum Level', value: 23, color: '#f59e0b' },
-    { name: 'Transfer Pressure', value: 12, color: '#3b82f6' },
-    { name: 'Other', value: 23, color: '#9ca3af' },
-  ];
+  // Live sim metrics
+  const sim = useMemo(() => {
+    let approve = 0, flag = 0, block = 0
+    allUnits.forEach(t => {
+      const { dec } = rescore(t, weights, thresholds)
+      if (dec === 'PASS') approve++; else if (dec === 'REVIEW') flag++; else block++
+    })
+    const len = allUnits.length || 1
+    const m = calcMetrics(allUnits, weights, thresholds)
+    return { approve, flag, block, approvePct: (approve / len) * 100, flagPct: (flag / len) * 100, blockPct: (block / len) * 100, ...m }
+  }, [allUnits, weights, thresholds])
 
-  // Component A: Heatmap Data
-  const heatmapCells = useMemo(() => {
-    return Array.from({ length: 100 }, (_, i) => {
-      const x = i % 10;
-      const y = Math.floor(i / 10);
-      const dist00 = Math.sqrt(x * x + y * y);
-      const dist09 = Math.sqrt(x * x + (9 - y) * (9 - y));
-      const dist90 = Math.sqrt((9 - x) * (9 - x) + y * y);
-      const dist99 = Math.sqrt((9 - x) * (9 - x) + (9 - y) * (9 - y));
-      const minDist = Math.min(dist00, dist09, dist90, dist99);
-      
-      let stress = (12 - minDist) / 12;
-      stress = stress * (predictedCRI / 0.3); // Scale stress by CRI
-      stress = Math.max(0, Math.min(1, stress));
-      
-      // Interpolate Hue: 240 (Blue) -> 0 (Red)
-      const hue = (1 - stress) * 240;
-      return { id: i, color: `hsl(${hue}, 100%, 45%)` };
-    });
-  }, [predictedCRI]);
+  // Agreement matrix
+  const matrix = useMemo(() => calcAgreementMatrix(allUnits), [allUnits])
 
-  // Physics Explanations Mapping
-  const physicsExplanations = {
-    'Molding Temp': {
-      deviation: "+8°C above nominal",
-      effect: "CTE mismatch → thermal stress at die-mold interface",
-      location: "center region",
-      color: "text-red-600",
-      bg: "bg-red-50"
-    },
-    'Vacuum Level': {
-      deviation: "-15% below target",
-      effect: "Void formation → increased acoustic impedance",
-      location: "corner regions",
-      color: "text-amber-600",
-      bg: "bg-amber-50"
-    },
-    'Transfer Pressure': {
-      deviation: "+2.5 MPa surge",
-      effect: "Wire sweep → potential shorting at lead-frame",
-      location: "peripheral bond pads",
-      color: "text-blue-600",
-      bg: "bg-blue-50"
-    },
-    'Other': {
-      deviation: "Nominal variance",
-      effect: "Composite minor stresses",
-      location: "global distribution",
-      color: "text-slate-600",
-      bg: "bg-slate-50"
-    }
-  };
+  // Physics rules breakdown
+  const ruleData = useMemo(() => PHYSICS_RULES.map(r => {
+    let triggered = 0, riskTrig = 0, riskNot = 0
+    allUnits.forEach(t => {
+      const risk = t.ensembleScore || 0
+      if (r.trigger(t)) { triggered++; riskTrig += risk } else { riskNot += risk }
+    })
+    const not = allUnits.length - triggered
+    return { ...r, pct: allUnits.length ? (triggered / allUnits.length) * 100 : 0, avgTrig: triggered ? (riskTrig / triggered) * 100 : 0, avgNot: not ? (riskNot / not) * 100 : 0 }
+  }), [allUnits])
 
-  const Badge = ({ label, icon: Icon, className }) => (
-    <div className={clsx("flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-wider", className)}>
-      {Icon && <Icon size={14} />}
-      {label}
-    </div>
-  );
+  // Feature correlations
+  const featureCorrs = useMemo(() => {
+    const scores = allUnits.map(t => t.ensembleScore || 0)
+    return FEATURE_MAP.map(f => {
+      const vals = allUnits.map(t => t[f.key] ?? 0)
+      return { ...f, avg: vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0, corr: pearsonCorrelation(vals, scores) }
+    }).sort((a, b) => Math.abs(b.corr) - Math.abs(a.corr))
+  }, [allUnits])
+
+  // Top disagreements
+  const topDisagreements = useMemo(() => [...allUnits]
+    .filter(t => t.lgbScore != null && t.isoScore != null)
+    .map(t => ({ ...t, delta: Math.abs((t.lgbScore || 0) - (t.isoScore || 0)) }))
+    .sort((a, b) => b.delta - a.delta).slice(0, 8), [allUnits])
+
+  const MetricBar = ({ value, label, reverse }) => {
+    let color = reverse ? (value <= 0.1 ? 'bg-emerald-400' : value <= 0.3 ? 'bg-amber-400' : 'bg-red-400') : (value >= 0.8 ? 'bg-emerald-400' : value >= 0.5 ? 'bg-amber-400' : 'bg-red-400')
+    return (
+      <div className="flex flex-col gap-1 w-full">
+        <div className="flex justify-between items-end">
+          <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">{label}</span>
+          <span className="font-sans text-xs font-black text-slate-700">{(value * 100).toFixed(1)}%</span>
+        </div>
+        <div className="h-1.5 bg-slate-100 w-full rounded-full overflow-hidden">
+          <div className={clsx("h-full rounded-full", color)} style={{ width: `${Math.min(value * 100, 100)}%` }} />
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-6 font-sans pb-8">
-      {/* Zone 1: Engineering Status Badges */}
-      <div className="flex flex-wrap gap-3 bg-white p-4 rounded-2xl border border-border shadow-sm">
-          <Badge 
-            label="ROM Reconstruction Time: 12ms" 
-            icon={Zap} 
-            className="bg-blue-500/10 text-blue-500 border-blue-500/30 shadow-glow-cyan"
-          />
-          <Badge 
-            label="Current Unit: DIE-899A" 
-            icon={Cpu} 
-            className="bg-bg-base text-text-primary border-border"
-          />
-          <Badge 
-            label="System Status: LIVE INFERENCE" 
-            icon={Activity} 
-            className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 animate-pulse-slow"
-          />
+    <div className="max-w-[1400px] mx-auto space-y-4 font-sans pb-8">
+      {/* HEADER */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-black tracking-wider text-slate-800 uppercase">Model Insights</h1>
+          <p className="text-xs text-slate-400 tracking-widest uppercase mt-1">Tri-Shield Ensemble · LightGBM + IsoForest + Physics Rules</p>
+        </div>
+        <div className="flex gap-2">
+          {setIsRunning && <button onClick={() => setIsRunning(!isRunning)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-amber-200 text-amber-600 bg-amber-50 hover:bg-amber-100">{isRunning ? <Pause size={12}/> : <Play size={12}/>}{isRunning ? 'Pause' : 'Resume'}</button>}
+          {triggerExcursionBurst && <button onClick={triggerExcursionBurst} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-red-200 text-red-600 bg-red-50 hover:bg-red-100"><Zap size={12}/>Excursion Burst</button>}
+        </div>
       </div>
 
-      {/* Zone 2: The Physics & Analytics Canvas */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Component A: 2D Stress Distribution Heatmap */}
-        <Panel title="2D Stress Distribution Heatmap" className="lg:col-span-1 flex flex-col items-center justify-center p-6">
-          <div className="w-64 h-64 grid grid-cols-10 grid-rows-10 gap-0.5 mb-4 p-1 bg-black/5 border border-border rounded-lg shadow-inner">
-            {heatmapCells.map(cell => (
-              <div 
-                key={cell.id} 
-                className="w-full h-full rounded-sm transition-colors duration-300"
-                style={{ backgroundColor: cell.color }}
-              />
-            ))}
+      {/* TOP STATS */}
+      <div className="grid grid-cols-4 gap-3">
+        {[
+          { label: 'Shield 1 Avg Score', value: (topStats.lgbAvg * 100).toFixed(1) + '%', sub: 'LightGBM defect probability', color: '#2563eb' },
+          { label: 'Shield 2 Anomaly Rate', value: (topStats.isoRate * 100).toFixed(1) + '%', sub: '% units where ISO > 0.5', color: '#7c3aed' },
+          { label: 'Shield 3 Rule Hit Rate', value: (topStats.behRate * 100).toFixed(1) + '%', sub: '% where physics rules fired', color: '#d97706' },
+          { label: 'Model Disagreement', value: (topStats.disRate * 100).toFixed(1) + '%', sub: '% where |S1 - S2| > 0.3', color: '#ef4444' },
+        ].map((s, i) => (
+          <div key={i} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4" style={{ borderLeftWidth: 4, borderLeftColor: s.color }}>
+            <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">{s.label}</p>
+            <p className="text-2xl font-black mt-1" style={{ color: s.color }}>{s.value}</p>
+            <p className="text-[9px] text-slate-400 mt-1 tracking-wider font-bold">{s.sub}</p>
           </div>
-          <div className="text-center space-y-1">
-            <p className="text-[10px] text-text-muted uppercase tracking-widest font-bold">
-              Reconstructed in 12ms via Singular Value Decomposition
-            </p>
-            <div className="flex items-center justify-center gap-2 text-[10px] uppercase text-text-muted mt-2 font-bold">
-              <span>Low Stress</span>
-              <div className="w-24 h-2 bg-gradient-to-r from-blue-600 to-red-600 rounded-full opacity-70" />
-              <span>High Stress</span>
-            </div>
-          </div>
-        </Panel>
-
-        {/* Component B: CRI Lifecycle Trajectory */}
-        <Panel title="CRI Lifecycle Trajectory" className="lg:col-span-1 h-[340px]">
-          <div className="h-full w-full pt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={criData} margin={{ top: 10, right: 10, left: -20, bottom: 50 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                <XAxis 
-                  dataKey="stage" 
-                  stroke="#94a3b8" 
-                  tick={{ fontSize: 10, fill: '#64748b', fontWeight: 'bold' }} 
-                  angle={-35} 
-                  textAnchor="end"
-                  height={60}
-                />
-                <YAxis 
-                  domain={[0, 1.0]} 
-                  stroke="#94a3b8" 
-                  tick={{ fontSize: 10, fill: '#64748b' }} 
-                />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#1e293b', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
-                  itemStyle={{ color: '#1e293b', fontWeight: 'bold' }}
-                  labelStyle={{ color: '#64748b', fontSize: '10px', textTransform: 'uppercase', fontWeight: 'bold' }}
-                />
-                <ReferenceLine 
-                  y={0.6} 
-                  stroke="#ef4444" 
-                  strokeDasharray="5 5" 
-                  strokeWidth={2}
-                  label={{ position: 'top', value: 'Critical Threshold', fill: '#ef4444', fontSize: 10, fontWeight: 'bold' }} 
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="cri" 
-                  stroke={isCritical ? "#ef4444" : "#3b82f6"} 
-                  strokeWidth={3} 
-                  dot={{ r: 4, fill: isCritical ? "#ef4444" : "#3b82f6", strokeWidth: 0 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </Panel>
-
-        {/* Component C: Root Cause Attribution Bar Chart */}
-        <Panel title="Root Cause Attribution" className="lg:col-span-1 h-[340px]">
-          <div className="h-full w-full pt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart layout="vertical" data={rootCauseData} margin={{ top: 10, right: 40, left: 20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                <BarXAxis type="number" hide />
-                <BarYAxis 
-                  type="category" 
-                  dataKey="name" 
-                  stroke="#94a3b8" 
-                  tick={{ fontSize: 11, fill: '#1e293b', fontWeight: 'bold' }}
-                  width={120}
-                />
-                <Tooltip 
-                  cursor={{ fill: '#f8fafc' }}
-                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
-                />
-                <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={24}>
-                  {rootCauseData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                  <LabelList dataKey="value" position="right" fill="#1e293b" formatter={(val) => `${val}%`} fontSize={11} fontWeight="bold" />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Panel>
-
+        ))}
       </div>
 
-      {/* Zone 3: Virtual Experimentation Sandbox */}
-      <Panel className="relative overflow-hidden border-border bg-white shadow-lg">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-signature opacity-50" />
-        
-        <div className="flex items-center gap-2 mb-6 border-b border-border pb-4">
-          <SlidersHorizontal className="text-blue-500" size={20} />
-          <h2 className="text-sm font-black tracking-widest text-text-primary uppercase">Virtual Experimentation Sandbox</h2>
-        </div>
-
-        {isCritical && (
-          <div className="mb-6 bg-red-500/5 border border-red-500/20 p-4 rounded-xl flex items-start gap-3 animate-in slide-in-from-top-2">
-            <AlertTriangle className="text-red-500 shrink-0 mt-0.5" size={18} />
-            <div>
-              <h3 className="text-red-500 font-black uppercase tracking-wider text-xs">WARNING: Delamination Risk Exceeds Threshold</h3>
-              <p className="text-red-600/70 text-[11px] mt-1 font-bold">ROM predicts catastrophic failure at Burn-In. Parameter optimization required.</p>
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Sliders Area */}
-          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-            
-            <div className="space-y-3 p-4 rounded-xl bg-slate-50/50 border border-border">
-              <div className="flex justify-between items-center">
-                <span className="text-[11px] font-black uppercase tracking-wider text-text-secondary">Molding Temperature (°C)</span>
-                <span className="px-2 py-1 rounded bg-blue-50 text-blue-600 border border-blue-100 text-xs font-black font-sans shadow-sm">{moldingTemp}</span>
-              </div>
-              <input 
-                type="range" 
-                min="160" max="190" 
-                value={moldingTemp} 
-                onChange={(e) => setMoldingTemp(Number(e.target.value))}
-                className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500" 
-              />
-              <div className="flex justify-between text-[10px] text-text-muted font-bold">
-                <span>160</span><span>190</span>
-              </div>
-            </div>
-
-            <div className="space-y-3 p-4 rounded-xl bg-slate-50/50 border border-border">
-              <div className="flex justify-between items-center">
-                <span className="text-[11px] font-black uppercase tracking-wider text-text-secondary">Vacuum Level (%)</span>
-                <span className="px-2 py-1 rounded bg-amber-50 text-amber-600 border border-amber-100 text-xs font-black font-sans shadow-sm">{vacuumLevel}</span>
-              </div>
-              <input 
-                type="range" 
-                min="80" max="100" 
-                value={vacuumLevel} 
-                onChange={(e) => setVacuumLevel(Number(e.target.value))}
-                className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-amber-500" 
-              />
-              <div className="flex justify-between text-[10px] text-text-muted font-bold">
-                <span>80</span><span>100</span>
-              </div>
-            </div>
-
-            <div className="space-y-3 p-4 rounded-xl bg-slate-50/50 border border-border sm:col-span-2 lg:col-span-1">
-              <div className="flex justify-between items-center">
-                <span className="text-[11px] font-black uppercase tracking-wider text-text-secondary">Transfer Pressure (MPa)</span>
-                <span className="px-2 py-1 rounded bg-purple-50 text-purple-600 border border-purple-100 text-xs font-black font-sans shadow-sm">{transferPressure}</span>
-              </div>
-              <input 
-                type="range" 
-                min="5" max="15" step="0.1"
-                value={transferPressure} 
-                onChange={(e) => setTransferPressure(Number(e.target.value))}
-                className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-500" 
-              />
-              <div className="flex justify-between text-[10px] text-text-muted font-bold">
-                <span>5.0</span><span>15.0</span>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Output Display */}
-          <div className={clsx(
-            "md:col-span-1 flex flex-col items-center justify-center p-6 rounded-2xl border relative overflow-hidden transition-colors duration-300 shadow-sm",
-            isCritical ? "bg-red-50 border-red-200" : "bg-emerald-50 border-emerald-200"
-          )}>
-            <h3 className={clsx(
-              "text-[10px] uppercase tracking-widest font-black mb-2 z-10",
-              isCritical ? "text-red-600/70" : "text-emerald-600/70"
-            )}>Predicted CRI Score</h3>
-            <div 
-              className="text-7xl font-black tracking-tighter tabular-nums z-10 transition-colors duration-300"
-              style={{ color: isCritical ? '#dc2626' : '#059669' }}
-            >
-              {predictedCRI.toFixed(3)}
-            </div>
-            <div className="mt-4 flex items-center gap-2 z-10">
-              {isCritical ? (
-                <span className="px-3 py-1 bg-red-100 text-red-700 text-[10px] uppercase font-black rounded-full border border-red-200 shadow-sm">
-                  CRITICAL RISK
-                </span>
-              ) : (
-                <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-[10px] uppercase font-black rounded-full border border-emerald-200 shadow-sm">
-                  SAFE ENVELOPE
-                </span>
-              )}
-            </div>
-          </div>
-
-        </div>
-      </Panel>
-
-      {/* Zone 4: Physics-Based Diagnostic Explanations - RELOCATED TO BOTTOM */}
-      <Panel className="relative overflow-hidden border-border bg-white shadow-lg">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-signature opacity-50" />
-        
-        <div className="flex items-center gap-2 mb-6 border-b border-border pb-4">
-          <BookOpen className="text-blue-500" size={20} />
-          <h2 className="text-sm font-black tracking-widest text-text-primary uppercase">Physics-Based Diagnostic Explanations</h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {rootCauseData.map((item) => {
-            const explanation = physicsExplanations[item.name] || physicsExplanations['Other'];
-            return (
-              <div key={item.name} className={clsx("p-4 rounded-xl border border-slate-100 shadow-sm bg-slate-50/30")}>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-text-primary">{item.name}</span>
-                  <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-white border border-border text-text-muted">
-                    {item.value}% Contrib.
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-[9px] uppercase tracking-widest text-text-muted font-black mb-0.5">Deviation</p>
-                    <p className={clsx("text-xs font-black font-sans", explanation.color)}>{explanation.deviation}</p>
+      <div className="grid grid-cols-12 gap-4 items-start">
+        {/* LEFT: Ensemble Controls */}
+        <div className="col-span-3 space-y-4">
+          <Panel title="Ensemble Controls">
+            <div className="space-y-5 pt-2">
+              <div>
+                <h3 className="text-[10px] text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 pb-1 font-bold">Live Weight Tuner</h3>
+                {[
+                  { key: 'lgb', label: 'Shield 1 (LGB)', color: '#2563eb' },
+                  { key: 'iso', label: 'Shield 2 (ISO)', color: '#7c3aed' },
+                  { key: 'beh', label: 'Shield 3 (Physics)', color: '#d97706' },
+                ].map(s => (
+                  <div key={s.key} className="space-y-1 mb-3">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-black uppercase tracking-widest" style={{ color: s.color }}>{s.label}</span>
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-black" style={{ color: s.color, backgroundColor: s.color + '15' }}>{weights[s.key].toFixed(2)}</span>
+                    </div>
+                    <input type="range" min="0" max="100" value={weights[s.key] * 100} onChange={e => handleWeightChange(s.key, Number(e.target.value))} className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200" style={{ accentColor: s.color }} />
                   </div>
-                  <div>
-                    <p className="text-[9px] uppercase tracking-widest text-text-muted font-black mb-0.5">Physical Effect</p>
-                    <p className="text-xs text-text-secondary leading-relaxed font-bold">{explanation.effect}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] uppercase tracking-widest text-text-muted font-black mb-0.5">Impact Area</p>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <div className="w-2 h-2 rounded-full bg-blue-500/40" />
-                      <p className="text-[10px] text-text-muted font-black uppercase tracking-tight italic">{explanation.location}</p>
+                ))}
+              </div>
+
+              {/* Live counts */}
+              <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-2">
+                {[
+                  { label: 'APPROVE', val: sim.approve, pct: sim.approvePct, color: '#10b981' },
+                  { label: 'FLAG', val: sim.flag, pct: sim.flagPct, color: '#f59e0b' },
+                  { label: 'BLOCK', val: sim.block, pct: sim.blockPct, color: '#ef4444' },
+                ].map(d => (
+                  <div key={d.label} className="flex justify-between items-center bg-white border border-slate-100 p-2 rounded-lg">
+                    <span className="text-[10px] tracking-wider font-bold" style={{ color: d.color }}>{d.label}</span>
+                    <div className="flex gap-2 items-center">
+                      <span className="font-black" style={{ color: d.color }}>{d.val}</span>
+                      <span className="text-[9px] w-10 text-right" style={{ color: d.color + '80' }}>({d.pct.toFixed(1)}%)</span>
                     </div>
                   </div>
-                </div>
+                ))}
               </div>
-            );
-          })}
-        </div>
-      </Panel>
 
+              {/* Thresholds */}
+              <div className="pt-3 border-t border-slate-100">
+                <h3 className="text-[10px] text-slate-400 uppercase tracking-widest mb-3 font-bold">Decision Thresholds</h3>
+                {[
+                  { key: 'approve', label: 'Approve', color: '#10b981' },
+                  { key: 'block', label: 'Block', color: '#ef4444' },
+                ].map(t => (
+                  <div key={t.key} className="space-y-1 mb-3">
+                    <div className="flex justify-between text-xs"><span style={{ color: t.color }} className="tracking-wider font-bold">{t.label} Thresh</span><span style={{ color: t.color }} className="font-black">{thresholds[t.key]}</span></div>
+                    <input type="range" min="10" max="90" value={thresholds[t.key]} onChange={e => setThresholds(p => ({ ...p, [t.key]: Number(e.target.value) }))} className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200" style={{ accentColor: t.color }} />
+                  </div>
+                ))}
+              </div>
+
+              {/* Confusion Matrix */}
+              <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl grid grid-cols-2 gap-2">
+                <MetricBar label="Precision" value={sim.p} />
+                <MetricBar label="Recall" value={sim.r} />
+                <MetricBar label="FP Rate" value={sim.fp} reverse />
+                <MetricBar label="F1 Score" value={sim.f} />
+              </div>
+              <div className="grid grid-cols-2 gap-1">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-center"><p className="text-[8px] text-emerald-500 uppercase tracking-wider font-bold">True Neg</p><p className="text-lg font-black text-emerald-600">{sim.TN}</p></div>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 text-center"><p className="text-[8px] text-amber-500 uppercase tracking-wider font-bold">False Pos</p><p className="text-lg font-black text-amber-600">{sim.FP}</p></div>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-center"><p className="text-[8px] text-red-500 uppercase tracking-wider font-bold">False Neg</p><p className="text-lg font-black text-red-600">{sim.FN}</p></div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center"><p className="text-[8px] text-blue-500 uppercase tracking-wider font-bold">True Pos</p><p className="text-lg font-black text-blue-600">{sim.TP}</p></div>
+              </div>
+            </div>
+          </Panel>
+        </div>
+
+        {/* RIGHT: 4 Sections */}
+        <div className="col-span-9 space-y-4">
+          {/* 1: Model Agreement Matrix */}
+          <Panel title="Shield Agreement Matrix">
+            <div className="grid grid-cols-2 gap-4 mb-3">
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 flex flex-col items-center relative overflow-hidden">
+                <ShieldCheck className="absolute -left-2 -bottom-2 w-20 h-20 text-emerald-200" strokeWidth={1}/>
+                <p className="text-[11px] uppercase tracking-widest mb-1 text-emerald-600 font-black z-10">Both Agree Safe</p>
+                <p className="text-3xl font-black text-emerald-600 z-10">{matrix.bothSafe}</p>
+                <p className="text-[10px] mt-1 px-2 py-0.5 rounded bg-emerald-100 text-emerald-600 font-bold z-10">{matrix.pctBothSafe.toFixed(1)}%</p>
+              </div>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex flex-col items-center">
+                <p className="text-[11px] uppercase tracking-widest mb-1 text-amber-600 font-black">⚠ ISO flags, LGB misses</p>
+                <p className="text-3xl font-black text-amber-600">{matrix.isoFlags}</p>
+                <p className="text-[10px] mt-1 px-2 py-0.5 rounded bg-amber-100 text-amber-600 font-bold">{matrix.pctIso.toFixed(1)}%</p>
+              </div>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex flex-col items-center">
+                <p className="text-[11px] uppercase tracking-widest mb-1 text-amber-600 font-black">⚠ LGB flags, ISO misses</p>
+                <p className="text-3xl font-black text-amber-600">{matrix.lgbFlags}</p>
+                <p className="text-[10px] mt-1 px-2 py-0.5 rounded bg-amber-100 text-amber-600 font-bold">{matrix.pctLgb.toFixed(1)}%</p>
+              </div>
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4 flex flex-col items-center">
+                <p className="text-[11px] uppercase tracking-widest mb-1 text-red-600 font-black">🚨 Both Agree Defective</p>
+                <p className="text-3xl font-black text-red-600">{matrix.bothDefect}</p>
+                <p className="text-[10px] mt-1 px-2 py-0.5 rounded bg-red-100 text-red-600 font-bold">{matrix.pctBothDefect.toFixed(1)}%</p>
+              </div>
+            </div>
+            <div className="text-center pt-2">
+              <span className="text-xs uppercase tracking-widest text-amber-600 font-black px-4 py-1.5 rounded-full border border-amber-200 bg-amber-50">{matrix.disagree} units need review (shields disagree)</span>
+            </div>
+          </Panel>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* 2: Physics Rule Breakdown */}
+            <Panel title="Shield 3 Rule Breakdown">
+              <div className="space-y-4 pt-2">
+                {ruleData.map(r => (
+                  <div key={r.id}>
+                    <div className="flex justify-between items-center mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] uppercase tracking-wider font-black px-1.5 py-0.5 rounded" style={{ backgroundColor: r.color + '15', color: r.color, border: `1px solid ${r.color}40` }}>{r.weight}</span>
+                        <span className="text-xs font-black text-slate-700">{r.name}</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400">{r.pct.toFixed(1)}% triggered</span>
+                    </div>
+                    <p className="text-[9px] text-slate-400 mb-1.5 ml-1 italic font-bold">{r.features}</p>
+                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden mb-2">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${r.pct}%`, backgroundColor: r.color }} />
+                    </div>
+                    <div className="flex justify-between text-[9px] uppercase tracking-wider px-1 bg-slate-50 border border-slate-100 py-1 rounded font-bold">
+                      <span className="text-slate-500">Risk when triggered: <span className="text-red-500 font-black">{r.avgTrig.toFixed(1)}%</span></span>
+                      <span className="text-slate-500">When not: <span className="text-emerald-500 font-black">{r.avgNot.toFixed(1)}%</span></span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+
+            {/* 3: Feature Correlation */}
+            <Panel title="Feature → Risk Correlation" className="flex flex-col h-full overflow-hidden">
+              <div className="flex-1 overflow-y-auto -mr-2 pr-2">
+                <table className="w-full text-left border-collapse">
+                  <thead className="sticky top-0 bg-white z-10 border-b border-slate-200">
+                    <tr>
+                      <th className="py-2 text-[9px] uppercase tracking-widest text-slate-400 font-bold">Feature</th>
+                      <th className="py-2 text-[9px] uppercase tracking-widest text-slate-400 font-bold text-right w-14">Avg</th>
+                      <th className="py-2 text-[9px] uppercase tracking-widest text-slate-400 font-bold text-center w-28">Corr</th>
+                      <th className="py-2 text-[9px] uppercase tracking-widest text-slate-400 font-bold text-right">Rule</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {featureCorrs.map(f => (
+                      <tr key={f.key} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-2.5 text-[10px] text-slate-600 truncate max-w-[120px] pr-2 font-bold">{f.label}</td>
+                        <td className="py-2.5 text-[10px] text-right text-slate-700 font-bold">{f.avg > 1000 ? (f.avg / 1000).toFixed(1) + 'k' : f.avg.toFixed(2)}</td>
+                        <td className="py-2.5 w-28 px-2">
+                          <div className="flex items-center justify-center w-full">
+                            <div className="w-full h-1.5 bg-slate-100 rounded-full flex relative">
+                              <div className="absolute top-0 bottom-0 left-1/2 w-px bg-slate-300 z-10" />
+                              {f.corr > 0
+                                ? <div className="absolute top-0 bottom-0 left-1/2 bg-red-400 rounded-r-full" style={{ width: `${Math.min(f.corr * 100, 50)}%` }} />
+                                : <div className="absolute top-0 bottom-0 right-1/2 bg-emerald-400 rounded-l-full" style={{ width: `${Math.min(Math.abs(f.corr) * 100, 50)}%` }} />}
+                            </div>
+                          </div>
+                          <div className="text-[8px] text-center mt-1 text-slate-400 font-bold">{f.corr > 0 ? '+' : ''}{f.corr.toFixed(2)}</div>
+                        </td>
+                        <td className="py-2.5 text-[9px] uppercase text-right pr-2">
+                          <span className="px-1.5 py-0.5 rounded border font-bold" style={{ color: f.color, backgroundColor: f.color + '10', borderColor: f.color + '30' }}>{f.rule}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Panel>
+          </div>
+
+          {/* 4: Top Disagreements */}
+          <Panel title="Shield Disagreement Cases — where LightGBM and IsoForest conflict most">
+            <div className="overflow-x-auto min-h-[200px]">
+              <table className="w-full text-left border-collapse">
+                <thead className="border-b border-slate-200">
+                  <tr>
+                    <th className="py-2 pl-4 text-[10px] uppercase tracking-widest text-slate-400 font-bold w-28">Unit ID</th>
+                    <th className="py-2 text-[10px] uppercase tracking-widest font-bold text-right w-16" style={{ color: '#2563eb' }}>S1 (LGB)</th>
+                    <th className="py-2 text-[10px] uppercase tracking-widest font-bold text-right w-16" style={{ color: '#7c3aed' }}>S2 (ISO)</th>
+                    <th className="py-2 text-[10px] uppercase tracking-widest font-bold text-right w-16" style={{ color: '#d97706' }}>S3 (PHY)</th>
+                    <th className="py-2 text-[10px] uppercase tracking-widest font-bold text-right pr-4 w-20">Decision</th>
+                    <th className="py-2 text-[10px] uppercase tracking-widest font-black text-center w-20">Delta</th>
+                    <th className="py-2 text-[10px] uppercase tracking-widest text-slate-400 font-bold">Reason</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {topDisagreements.map(t => {
+                    const isHigh = t.delta > 0.5
+                    return (
+                      <tr key={t.unit_id || t.id} className={clsx("hover:bg-slate-50 transition-colors", isHigh && "border-l-2 border-l-red-400")}>
+                        <td className="py-3 pl-4 text-[11px] text-slate-700 font-bold"><span className="bg-slate-100 px-1.5 rounded font-sans">{(t.unit_id || t.id || '').slice(0, 12)}</span></td>
+                        <td className="py-3 text-[11px] text-right font-bold" style={{ color: '#2563eb' }}>{((t.lgbScore || 0) * 100).toFixed(1)}%</td>
+                        <td className="py-3 text-[11px] text-right font-bold" style={{ color: '#7c3aed' }}>{((t.isoScore || 0) * 100).toFixed(1)}%</td>
+                        <td className="py-3 text-[11px] text-right font-bold" style={{ color: '#d97706' }}>{((t.behScore || 0) * 100).toFixed(1)}%</td>
+                        <td className="py-3 text-[10px] text-right pr-4">
+                          <span className={clsx("px-2 py-0.5 rounded font-black uppercase",
+                            t.decision === 'REJECT' ? 'text-red-600 bg-red-50' : t.decision === 'REVIEW' ? 'text-amber-600 bg-amber-50' : 'text-emerald-600 bg-emerald-50'
+                          )}>{t.decision}</span>
+                        </td>
+                        <td className={clsx("py-3 text-[11px] text-center font-black", isHigh ? 'text-red-500' : t.delta > 0.3 ? 'text-amber-500' : 'text-emerald-500')}>±{(t.delta * 100).toFixed(1)}%</td>
+                        <td className="py-3 text-[9px] text-slate-400 pr-2 truncate max-w-[200px] font-bold">{t.reasons?.[0]?.slice(0, 50) || 'No explicit reason'}</td>
+                      </tr>
+                    )
+                  })}
+                  {topDisagreements.length === 0 && <tr><td colSpan={7} className="text-center py-8 text-xs text-slate-400 font-bold">Waiting for units to be scored...</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+        </div>
+      </div>
     </div>
-  );
+  )
 }
