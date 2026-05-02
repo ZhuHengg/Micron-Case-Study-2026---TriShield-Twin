@@ -202,21 +202,33 @@ function StressHeatmapCanvas({ stressGrid, maxStress }) {
       for (let col = 0; col < gridSize; col++) {
         const val = stressGrid[row][col]
         const norm = Math.min(val / max, 1)
-        const hue = (1 - norm) * 240 // blue → red
-        ctx.fillStyle = `hsl(${hue}, 100%, 45%)`
+        
+        // Professional Gradient: Micron Blue (#0066CC) -> High-Risk Red (#EF4444)
+        // We'll interpolate RGB values
+        const r = Math.round(0 + norm * (239 - 0))
+        const g = Math.round(102 + norm * (68 - 102))
+        const b = Math.round(204 + norm * (68 - 204))
+        
+        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`
         ctx.fillRect(col * cellW, row * cellH, cellW + 0.5, cellH + 0.5)
       }
     }
   }, [stressGrid, maxStress])
 
   return (
-    <canvas 
-      ref={canvasRef} 
-      width={250} 
-      height={250} 
-      className="rounded-lg border border-slate-200 shadow-inner"
-      style={{ imageRendering: 'pixelated' }}
-    />
+    <div className="relative group">
+      <canvas 
+        ref={canvasRef} 
+        width={300} 
+        height={300} 
+        className="rounded-[24px] border border-slate-200/60 shadow-inner w-full aspect-square"
+        style={{ imageRendering: 'pixelated' }}
+      />
+      <div className="absolute inset-0 rounded-[24px] ring-1 ring-inset ring-white/20 pointer-events-none" />
+      
+      {/* Overlay Vignette */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-40 rounded-[24px] pointer-events-none" />
+    </div>
   )
 }
 
@@ -348,7 +360,7 @@ export default function UnitInvestigation({ engine }) {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] w-full max-w-[1600px] mx-auto font-sans bg-slate-50">
+    <div className="flex flex-col h-[calc(100vh-80px)] w-full max-w-[1600px] mx-auto font-sans bg-transparent">
       
       {/* ═════════ ZONE 1: HERO PIPELINE (Top Navigation) ═════════ */}
       <div className="flex items-center gap-6 overflow-x-auto custom-scrollbar shrink-0 px-8 py-6 bg-white border-b border-slate-200 shadow-sm z-10 relative">
@@ -428,7 +440,7 @@ export default function UnitInvestigation({ engine }) {
             <CardHeader className="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
               <div className="flex items-center justify-between mb-2">
                 <CardTitle className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                  <Database size={16} className="text-sky-500" />
+                  <Database size={16} className="text-[#0066CC]" />
                   Unit Directory
                 </CardTitle>
                 <Badge variant="outline" className="text-[10px] font-bold bg-white">{allUnits.length} Live</Badge>

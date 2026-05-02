@@ -118,30 +118,30 @@ function GaugeChart({ score, decision }) {
 
 /* ─── KPI Card Component ────────────────────────────────── */
 const KpiCard = ({ icon: Icon, iconColor, label, value, subtitle, trend, trendUp }) => (
-  <div className="flex-1 bg-white rounded-[20px] border border-slate-200 shadow-sm p-6 flex items-center gap-5 transition-all hover:shadow-md hover:border-slate-300 group">
+  <div className="flex-1 glass-card rounded-[20px] p-6 flex items-center gap-5 transition-all hover:shadow-xl hover:-translate-y-0.5 group">
     <div className={clsx(
       "w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105",
-      iconColor === 'blue'   && "bg-blue-50 text-blue-600",
+      iconColor === 'blue'   && "bg-[#0066CC]/10 text-[#0066CC]",
       iconColor === 'red'    && "bg-red-50 text-red-600",
-      iconColor === 'green'  && "bg-emerald-50 text-emerald-600",
+      iconColor === 'green'  && "bg-[#00A3AD]/10 text-[#00A3AD]",
     )}>
       <Icon size={28} />
     </div>
     <div className="flex flex-col min-w-0">
-      <span className="font-sans text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">{label}</span>
+      <span className="font-sans text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-[0.2em] mb-1 transition-colors">{label}</span>
       <div className="flex items-baseline gap-2">
-        <span className="font-sans text-[32px] font-black text-slate-900 leading-none tracking-tight tabular-nums">{value}</span>
+        <span className="font-sans text-[32px] font-black text-slate-900 dark:text-white leading-none tracking-tight tabular-nums transition-colors">{value}</span>
         {trend !== undefined && (
           <span className={clsx(
             "flex items-center gap-0.5 text-xs font-black",
-            trendUp ? "text-red-500" : "text-emerald-500"
+            trendUp ? "text-red-500" : "text-[#00A3AD]"
           )}>
             {trendUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
             {trend}
           </span>
         )}
       </div>
-      {subtitle && <span className="font-sans text-[11px] font-bold text-slate-400 mt-0.5">{subtitle}</span>}
+      {subtitle && <span className="font-sans text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{subtitle}</span>}
     </div>
   </div>
 )
@@ -218,7 +218,7 @@ export default function Dashboard({ engine }) {
   }, [allUnits, searchTerm, sortMode, filterDecision])
 
   return (
-    <div className="flex flex-col min-h-full bg-slate-50/50 font-sans">
+    <div className="flex flex-col min-h-full bg-transparent font-sans">
 
       {/* ═══════════ ZONE 1: KPI METRICS ═══════════ */}
       <div className="shrink-0 px-8 pt-6 pb-2">
@@ -227,43 +227,48 @@ export default function Dashboard({ engine }) {
           <KpiCard
             icon={Database}
             iconColor="blue"
-            label="Total Active Lots"
+            label="Active Lot Pool"
             value={kpis.activeLots}
-            subtitle={`${total} units processed`}
+            subtitle={`${total} units integrated`}
           />
           <KpiCard
             icon={AlertTriangle}
             iconColor="red"
-            label="Critical Alerts"
-            value={kpis.criticalAlerts}
-            subtitle={`${kpis.rejectAlerts} rejected / blocked`}
+            label="Critical Excursions"
+            value={kpis.rejectAlerts}
+            subtitle={`${kpis.criticalAlerts} reviews pending`}
             trend={kpis.alertTrend ? `${Math.abs(parseFloat(kpis.alertTrend))}%` : undefined}
             trendUp={kpis.alertTrendUp}
           />
           <KpiCard
             icon={ShieldCheck}
             iconColor="green"
-            label="Predicted Floor Yield"
+            label="Inferred Process Yield"
             value={`${kpis.yieldPct.toFixed(1)}%`}
-            subtitle={`${approved} nominal / ${total} total`}
+            subtitle="SEMICONDUCTOR TEAL TARGET"
           />
         </div>
       </div>
 
       {/* ═══════════ ZONE 2: MASTER BATCH LIST ═══════════ */}
-      <div className="flex-1 flex flex-col min-h-0 px-8 pb-8">
-        <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0 px-8 pb-8 relative">
+        {/* Watermark */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 opacity-[0.03] select-none">
+          <h1 className="text-[12vw] font-black tracking-widest -rotate-12">SENTINEL</h1>
+        </div>
+
+        <div className="glass-card rounded-[24px] flex flex-col flex-1 min-h-0 overflow-hidden z-10 relative">
 
           {/* List Header & Controls */}
-          <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/50 shrink-0">
+          <div className="px-8 py-5 border-b border-slate-100 dark:border-white/10 bg-slate-50/30 dark:bg-white/5 shrink-0 transition-colors">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <Database size={18} className="text-sky-500" />
-                <h2 className="font-sans text-sm font-black text-slate-800 uppercase tracking-widest">
-                  Unit Directory
+                <Database size={18} className="text-[#0066CC] dark:text-[#00A3AD] transition-colors" />
+                <h2 className="font-sans text-[12px] font-black text-slate-800 dark:text-white uppercase tracking-[0.2em] transition-colors">
+                  Unit Inventory Directory
                 </h2>
-                <span className="font-sans text-[11px] font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-lg tabular-nums">
-                  {filteredUnits.length} of {total} units
+                <span className="font-mono text-[10px] font-black text-[#0066CC] bg-[#0066CC]/5 px-3 py-1 rounded-full">
+                  {filteredUnits.length} / {total} TOTAL TRACEABILITY
                 </span>
               </div>
             </div>
@@ -278,7 +283,7 @@ export default function Dashboard({ engine }) {
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                   placeholder="Search unit ID, lot, archetype, fab..."
-                  className="w-full pl-11 pr-4 py-2.5 text-sm font-bold text-slate-700 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-300 placeholder:text-slate-300 shadow-sm"
+                  className="w-full pl-11 pr-4 py-2.5 text-sm font-bold text-slate-700 dark:text-white bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-500/50 focus:border-sky-300 placeholder:text-slate-300 dark:placeholder:text-slate-400 shadow-sm transition-colors"
                 />
               </div>
 
@@ -287,7 +292,7 @@ export default function Dashboard({ engine }) {
                 <select
                   value={sortMode}
                   onChange={e => setSortMode(e.target.value)}
-                  className="appearance-none bg-white border border-slate-200 rounded-xl px-4 pr-10 py-2.5 text-xs font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500/20 uppercase tracking-wider cursor-pointer shadow-sm"
+                  className="appearance-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl px-4 pr-10 py-2.5 text-xs font-bold text-slate-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-500/50 uppercase tracking-wider cursor-pointer shadow-sm transition-colors"
                 >
                   <option>Most Recent</option>
                   <option>Highest Risk</option>
@@ -355,38 +360,38 @@ export default function Dashboard({ engine }) {
                     key={unit.unit_id || unit.id || idx}
                     onClick={() => setSelectedUnitId(unit.unit_id || unit.id)}
                     className={clsx(
-                      "grid grid-cols-[2fr_1.2fr_1fr_1fr_1.5fr_1fr_1fr] gap-4 px-8 py-4 border-b border-slate-50 transition-all hover:bg-sky-50/50 group items-center cursor-pointer",
+                      "grid grid-cols-[2fr_1.2fr_1fr_1fr_1.5fr_1fr_1fr] gap-4 px-8 py-2.5 border-b border-slate-50 transition-all hover:bg-slate-50/80 group items-center cursor-pointer",
                       idx === 0 && "animate-pop-out",
-                      selectedUnitId === (unit.unit_id || unit.id) && "bg-sky-50 ring-1 ring-inset ring-sky-200"
+                      selectedUnitId === (unit.unit_id || unit.id) && "bg-slate-50 ring-1 ring-inset ring-slate-200"
                     )}
                   >
                     {/* Unit ID */}
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className={clsx("w-2.5 h-2.5 rounded-full shrink-0 shadow-sm", bin.dot)} />
+                      <div className={clsx("w-2 h-2 rounded-full shrink-0 shadow-sm", bin.dot)} />
                       <div className="flex flex-col min-w-0">
-                        <span className="font-sans text-[15px] font-black text-slate-900 tracking-tight truncate">
+                        <span className="font-mono text-[14px] font-black text-slate-800 tracking-tight truncate uppercase">
                           {unit.unit_id || unit.id}
                         </span>
-                        <span className="font-sans text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          Wafer #{unit.waferNum || '—'}
+                        <span className="font-mono text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                          WAF-{unit.waferNum || '—'}
                         </span>
                       </div>
                     </div>
 
                     {/* Lot / Fab */}
                     <div className="flex flex-col min-w-0">
-                      <span className="font-sans text-[13px] font-bold text-slate-700 truncate">
+                      <span className="font-mono text-[12px] font-bold text-slate-600 truncate">
                         {unit.lotId || '—'}
                       </span>
-                      <span className="font-sans text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      <span className="text-[9px] font-black text-[#0066CC] uppercase tracking-widest">
                         {unit.fab || 'Fab 20'}
                       </span>
                     </div>
 
                     {/* Decision */}
-                    <div>
+                    <div className="flex justify-center">
                       <span className={clsx(
-                        "inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-black uppercase tracking-widest border",
+                        "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border",
                         decision.bg, decision.text, decision.border
                       )}>
                         {decision.label}
@@ -394,19 +399,22 @@ export default function Dashboard({ engine }) {
                     </div>
 
                     {/* Risk Score */}
-                    <div className="flex flex-col gap-1.5">
-                      <span className={clsx(
-                        "font-sans text-[20px] font-black leading-none tabular-nums",
-                        riskNorm >= 7 ? 'text-red-600' : riskNorm > 4 ? 'text-amber-600' : 'text-emerald-600'
-                      )}>
-                        {riskNorm.toFixed(1)}
-                      </span>
-                      {/* Mini risk bar */}
-                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden max-w-[80px]">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-baseline justify-between">
+                        <span className={clsx(
+                          "font-mono text-[14px] font-black leading-none tabular-nums",
+                          riskNorm >= 7 ? 'text-red-600' : riskNorm > 4 ? 'text-amber-600' : 'text-[#00A3AD]'
+                        )}>
+                          {riskNorm.toFixed(1)}
+                        </span>
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">IDX</span>
+                      </div>
+                      {/* Mini visual gauge */}
+                      <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
                         <div
                           className={clsx(
-                            "h-full rounded-full transition-all",
-                            riskNorm >= 7 ? 'bg-red-500' : riskNorm > 4 ? 'bg-amber-500' : 'bg-emerald-500'
+                            "h-full rounded-full transition-all duration-500",
+                            riskNorm >= 7 ? 'bg-red-500' : riskNorm > 4 ? 'bg-amber-500' : 'bg-[#00A3AD]'
                           )}
                           style={{ width: `${Math.min(100, risk)}%` }}
                         />
@@ -504,13 +512,13 @@ export default function Dashboard({ engine }) {
             <div className="fixed inset-0 bg-black/20 z-[200] backdrop-blur-sm" onClick={() => setSelectedUnitId(null)} />
 
             {/* Panel */}
-            <div className="fixed top-0 right-0 h-full w-[480px] bg-white shadow-2xl z-[201] flex flex-col border-l border-slate-200 animate-slide-in">
+            <div className="fixed top-0 right-0 h-full w-[480px] glass shadow-2xl z-[201] flex flex-col border-l border-slate-200/50 animate-slide-in">
               {/* Header */}
-              <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 shrink-0 flex items-center justify-between">
+              <div className="px-6 py-5 border-b border-slate-100 bg-white/50 shrink-0 flex items-center justify-between">
                 <div>
-                  <h3 className="font-sans text-[15px] font-black text-slate-900 tracking-tight">{u.unit_id || u.id}</h3>
-                  <span className="font-sans text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    {u.lotId || '—'} • {u.fab || 'Fab 20'} • Wafer #{u.waferNum || '—'}
+                  <h3 className="font-mono text-[15px] font-black text-slate-900 tracking-tight uppercase">{u.unit_id || u.id}</h3>
+                  <span className="font-mono text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    {u.lotId || '—'} • {u.fab || 'Fab 20'} • WAF-{u.waferNum || '—'}
                   </span>
                 </div>
                 <button onClick={() => setSelectedUnitId(null)} className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
@@ -532,11 +540,11 @@ export default function Dashboard({ engine }) {
                   )}>
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Risk / 10</span>
                     <span className={clsx("text-2xl font-black",
-                      riskNorm >= 7 ? "text-red-600" : riskNorm > 4 ? "text-amber-600" : "text-emerald-600"
+                      riskNorm >= 7 ? "text-red-600" : riskNorm > 4 ? "text-amber-600" : "text-[#00A3AD]"
                     )}>{riskNorm.toFixed(1)}</span>
                   </div>
-                  <div className={clsx("flex-1 rounded-2xl p-4 text-center border", bin.bg, `border-${bin.color}/20`)}>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Bin</span>
+                  <div className={clsx("flex-1 rounded-2xl p-4 text-center border shadow-sm", bin.bg, `border-${bin.color}/20`)}>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Bin Code</span>
                     <span className={clsx("text-sm font-black", bin.text)}>{bin.short}</span>
                   </div>
                 </div>

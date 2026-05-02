@@ -1,32 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --bg-base: #f8fafc;
+    --bg-base: #F0F4F8;
     --bg-50: #ffffff;
-    --bg-100: #f1f5f9;
-    --bg-200: #e2e8f0;
-    --bg-300: #cbd5e1;
-    --border: #e2e8f0;
-    --border-md: #cbd5e1;
+    --bg-100: #E1EFFF;
+    --bg-200: #C2DFFF;
+    --bg-300: #A3CFFF;
+    --border: #C2DFFF;
+    --border-md: #A3CFFF;
 
-    --cyan-900: #083344;
-    --cyan-700: #0e7490;
-    --cyan-500: #06b6d4;
-    --cyan-400: #22d3ee;
-    --cyan-100: #cffafe;
-    --cyan-50: #ecfeff;
+    /* Micron Brand Colors */
+    --primary: #0066CC;
+    --primary-hover: #0052A3;
+    --teal-micron: #00A3AD;
+    --amber-caution: #f59e0b;
 
-    --teal-700: #0f766e;
-    --teal-500: #14b8a6;
-    --teal-400: #2dd4bf;
-    --teal-200: #99f6e4;
-    --teal-50: #f0fdfa;
-
-    --approve: #10b981;
-    --flag: #f59e0b;
+    --approve: var(--teal-micron);
+    --flag: var(--amber-caution);
     --block: #ef4444;
 
     --text-primary: #0f172a;
@@ -34,20 +29,39 @@
     --text-muted: #94a3b8;
     --text-white: #ffffff;
 
-    /* Industrial Status Colors */
-    --status-pass: #10b981;
-    --status-marginal: #f59e0b;
+    /* Status Colors */
+    --status-pass: var(--teal-micron);
+    --status-marginal: var(--amber-caution);
     --status-reject: #ef4444;
+  }
 
-    /* Badge Colors (Light Theme) */
-    --badge-unit: #2563eb;
-    --badge-process: #059669;
-    --badge-drift: #d97706;
+  .dark {
+    --bg-base: #0B1120;
+    --bg-50: #1E293B;
+    --bg-100: #334155;
+    --bg-200: #475569;
+    --bg-300: #64748b;
+    --border: #334155;
+    --border-md: #475569;
+
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
   }
 
   body {
-    @apply bg-bg-base text-text-primary font-sans antialiased;
-    background-color: var(--bg-base);
+    background: linear-gradient(135deg, #F0F4F8 0%, #D9E2EC 100%);
+    @apply text-slate-800 antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .dark body {
+    background: linear-gradient(135deg, #4B0082 0%, #0F172A 40%, #1E293B 100%);
+    @apply text-white;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
   }
 
   html, body, #root {
@@ -58,30 +72,49 @@
 
 @layer components {
   .section-label {
-    @apply uppercase tracking-widest text-[10px] text-text-muted font-bold;
+    @apply uppercase tracking-widest text-[10px] text-text-muted font-black;
   }
 
-  .badge-unit {
-    @apply bg-blue-50 text-blue-600 border-blue-200 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border;
+  .glass {
+    @apply backdrop-blur-md bg-white/70 border-white/20 dark:bg-slate-900/70 dark:border-slate-800/20;
   }
-  .badge-process {
-    @apply bg-emerald-50 text-emerald-600 border-emerald-200 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border;
+
+  .glass-card {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    @apply text-slate-800 transition-colors duration-300;
   }
-  .badge-drift {
-    @apply bg-amber-50 text-amber-600 border-amber-200 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border;
+
+  .dark .glass-card {
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    @apply text-white;
+  }
+
+  .shadow-premium {
+    box-shadow: 0 10px 40px -10px rgba(0,0,0,0.08);
+  }
+
+  .animate-excursion-glow {
+    animation: excursion-glow 2s infinite;
   }
 }
 
-/* Live Simulator animations */
+@keyframes excursion-glow {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
 @keyframes popOut {
-  0% {
-    transform: translateX(-10px);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(0);
-    opacity: 1;
-  }
+  0% { transform: translateX(-10px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
 }
 
 .animate-pop-out {
@@ -89,20 +122,14 @@
 }
 
 @keyframes slideIn {
-  0% {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(0);
-    opacity: 1;
-  }
+  0% { transform: translateX(100%); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
 }
 
 .animate-slide-in {
   animation: slideIn 0.25s ease-out forwards;
 }
-/* Custom Scrollbar (Light Mode) */
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -111,14 +138,13 @@
   background: transparent; 
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--bg-300); 
+  @apply bg-slate-200 dark:bg-slate-700;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted); 
+  @apply bg-slate-300 dark:bg-slate-600;
 }
 
-/* Slider Track CSS (Light Mode) */
 input[type=range] {
   -webkit-appearance: none;
   background: transparent;
@@ -128,7 +154,7 @@ input[type=range]::-webkit-slider-thumb {
   height: 14px;
   width: 14px;
   border-radius: 50%;
-  background: var(--slider-color, var(--cyan-500));
+  background: var(--slider-color, var(--primary));
   cursor: pointer;
   margin-top: -5px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
@@ -140,8 +166,8 @@ input[type=range]::-webkit-slider-runnable-track {
   background: var(--bg-200);
   border-radius: 4px;
 }
-.slider-lgb     { --slider-color: #0ea5e9; }
+.slider-lgb     { --slider-color: #0066CC; }
 .slider-iso     { --slider-color: #8b5cf6; }
 .slider-beh     { --slider-color: #f59e0b; }
-.slider-approve { --slider-color: #10b981; }
+.slider-approve { --slider-color: #00A3AD; }
 .slider-flag    { --slider-color: #f59e0b; }

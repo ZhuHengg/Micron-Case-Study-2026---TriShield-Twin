@@ -1,293 +1,258 @@
 import React, { useState } from 'react'
-import { Beaker, RefreshCw, Play, BarChart2, CheckCircle, AlertTriangle } from 'lucide-react'
+import { 
+  Beaker, RefreshCw, Play, BarChart2, CheckCircle, 
+  AlertTriangle, Sparkles, Database, ShieldAlert 
+} from 'lucide-react'
 import clsx from 'clsx'
+
+const SENSOR_NOMINALS = {
+  bond_force: 30.0,
+  epoxy_viscosity: 5000,
+  ultrasonic_power: 1.2,
+  bond_time: 15.0,
+  transfer_pressure: 8.0,
+  molding_temp: 180,
+  reflow_peak_temp: 245,
+  spindle_current: 2.0
+}
 
 export default function ParameterLab() {
   const [isScoring, setIsScoring] = useState(false)
   const [result, setResult] = useState(null)
   
+  // Parameter State for What-If Analysis
+  const [params, setParams] = useState({
+    bond_force: 30.0,
+    epoxy_viscosity: 5000,
+    ultrasonic_power: 1.2,
+    bond_time: 15.0,
+    transfer_pressure: 8.0,
+    molding_temp: 180,
+    reflow_peak_temp: 265, // Start with a 'bad' value to show off optimization
+    spindle_current: 2.0
+  })
+
+  const handleParamChange = (key, val) => {
+    setParams(prev => ({ ...prev, [key]: parseFloat(val) || 0 }))
+  }
+
   const handleScore = () => {
     setIsScoring(true)
     setTimeout(() => {
+      // Simulate ROM Inference
+      const isHighRisk = params.reflow_peak_temp > 260 || params.epoxy_viscosity < 4000
       setResult({
-        riskScore: 89,
-        riskLevel: 'HIGH RISK',
+        riskScore: isHighRisk ? 82 : 12,
+        riskLevel: isHighRisk ? 'HIGH RISK' : 'NOMINAL',
         models: {
-          lightgbm: 92,
-          xgboost: 88,
-          autoencoder: 85
+          lightgbm: isHighRisk ? 85 : 10,
+          xgboost: isHighRisk ? 78 : 15,
+          autoencoder: isHighRisk ? 83 : 12
         },
-        reasons: [
-          'Reflow Peak Temp exceeds golden baseline by 15°C',
-          'High Capillary Stroke combined with low Wire Tension',
-          'Epoxy Viscosity indicates potential voiding risk'
-        ],
+        reasons: isHighRisk 
+          ? ['Reflow Peak Temp exceeds golden baseline', 'Epoxy Viscosity indicates potential voiding']
+          : ['All parameters within 3-sigma control limits'],
         shap: [
-          { feature: 'Reflow Peak Temp', value: 12.5, positive: true },
-          { feature: 'Capillary Stroke', value: 8.2, positive: true },
-          { feature: 'Epoxy Viscosity', value: 5.1, positive: true },
+          { feature: 'Reflow Peak Temp', value: isHighRisk ? 12.5 : 0.5, positive: isHighRisk },
+          { feature: 'Epoxy Viscosity', value: isHighRisk ? 8.2 : 1.2, positive: isHighRisk },
           { feature: 'Bond Force', value: -2.3, positive: false },
           { feature: 'Molding Temp', value: -4.1, positive: false },
         ]
       })
       setIsScoring(false)
-    }, 1500)
+    }, 800)
+  }
+
+  const handleOptimize = () => {
+    // Inverse ROM Logic: Snap to Nominals
+    setParams({ ...SENSOR_NOMINALS })
+    setResult(null)
   }
 
   const handleReset = () => {
+    setParams({ ...SENSOR_NOMINALS, reflow_peak_temp: 265 })
     setResult(null)
   }
 
   return (
-    <div className="flex flex-col space-y-6">
-      
+    <div className="flex flex-col space-y-6 animate-fade-in">
+
       {/* Top Row: Inputs & Results */}
-      <div className="grid grid-cols-3 gap-6 shrink-0">
-        
+      <div className="grid grid-cols-[1fr_400px] gap-6 shrink-0">
+
         {/* Left: Input Form */}
-        <div className="col-span-2 bg-bg-50 rounded-xl p-6 border border-border shadow-sm flex flex-col">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2 text-text-primary">
-              <Beaker size={20} className="text-cyan-600" />
-              <h3 className="font-sans text-[14px] font-black uppercase tracking-widest">Simulate Process Parameters</h3>
+        <div className="bg-white rounded-[24px] p-8 shadow-premium flex flex-col border border-slate-200/60">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#0066CC]/10 flex items-center justify-center text-[#0066CC]">
+                <Beaker size={20} />
+              </div>
+              <div>
+                <h3 className="font-sans text-[14px] font-black uppercase tracking-widest text-slate-800">Process Simulation Lab</h3>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Digital Twin Parameter Tuning</span>
+              </div>
             </div>
-            <button onClick={handleReset} className="flex items-center gap-1 text-[10px] font-bold text-text-muted hover:text-text-primary uppercase tracking-wider transition-colors">
-              <RefreshCw size={12} /> Reset
+            <button onClick={handleReset} className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 hover:text-[#0066CC] uppercase tracking-widest transition-colors">
+              <RefreshCw size={12} /> Reset System
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-8 gap-y-6">
-            {/* Die Bond */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Bond Force (N)</label>
-              <input type="number" defaultValue={5.0} className="w-full bg-bg-base border border-border rounded-lg px-3 py-2 text-[12px] font-bold text-text-primary focus:outline-none focus:border-cyan-500 transition-colors" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Epoxy Viscosity (cP)</label>
-              <input type="number" defaultValue={450} className="w-full bg-bg-base border border-border rounded-lg px-3 py-2 text-[12px] font-bold text-text-primary focus:outline-none focus:border-cyan-500 transition-colors" />
-            </div>
-
-            {/* Wire Bond */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Ultrasonic Power (W)</label>
-              <input type="number" defaultValue={80} className="w-full bg-bg-base border border-border rounded-lg px-3 py-2 text-[12px] font-bold text-text-primary focus:outline-none focus:border-cyan-500 transition-colors" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Wire Tension (gf)</label>
-              <input type="number" defaultValue={4.5} className="w-full bg-bg-base border border-border rounded-lg px-3 py-2 text-[12px] font-bold text-text-primary focus:outline-none focus:border-cyan-500 transition-colors" />
-            </div>
-
-            {/* Mold */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Transfer Pressure (MPa)</label>
-              <input type="number" defaultValue={8.0} className="w-full bg-bg-base border border-border rounded-lg px-3 py-2 text-[12px] font-bold text-text-primary focus:outline-none focus:border-cyan-500 transition-colors" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Molding Temp (°C)</label>
-              <input type="number" defaultValue={175} className="w-full bg-bg-base border border-border rounded-lg px-3 py-2 text-[12px] font-bold text-text-primary focus:outline-none focus:border-cyan-500 transition-colors" />
-            </div>
-
-            {/* Ball Attach / Saw */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Reflow Peak Temp (°C)</label>
-              <input type="number" defaultValue={260} className="w-full bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 text-[12px] font-bold text-rose-700 focus:outline-none focus:border-rose-500 transition-colors" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Spindle RPM (k)</label>
-              <input type="number" defaultValue={45} className="w-full bg-bg-base border border-border rounded-lg px-3 py-2 text-[12px] font-bold text-text-primary focus:outline-none focus:border-cyan-500 transition-colors" />
-            </div>
+          <div className="grid grid-cols-2 gap-x-10 gap-y-8">
+            {Object.entries(params).map(([key, value]) => {
+              const isDeviated = Math.abs(value - SENSOR_NOMINALS[key]) / SENSOR_NOMINALS[key] > 0.1
+              return (
+                <div key={key} className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{key.replace(/_/g, ' ')}</label>
+                    <span className="font-mono text-[10px] font-bold text-slate-400">Nom: {SENSOR_NOMINALS[key]}</span>
+                  </div>
+                  <div className="relative">
+                    <input 
+                      type="number" 
+                      value={value}
+                      onChange={(e) => handleParamChange(key, e.target.value)}
+                      className={clsx(
+                        "w-full bg-slate-50 border rounded-xl px-4 py-3 text-[14px] font-black font-mono transition-all focus:outline-none focus:ring-2 focus:ring-[#0066CC]/20",
+                        isDeviated ? "border-amber-300 text-amber-700 bg-amber-50/30" : "border-slate-200 text-slate-800 focus:border-[#0066CC]"
+                      )} 
+                    />
+                    {isDeviated && <AlertTriangle size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-500" />}
+                  </div>
+                </div>
+              )
+            })}
           </div>
 
-          <div className="mt-8 flex justify-end">
-            <button 
+          <div className="mt-10 flex justify-end gap-3">
+            <button
+              onClick={handleOptimize}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest border-2 border-[#00A3AD] text-[#00A3AD] hover:bg-[#00A3AD]/5 transition-all"
+            >
+              <Sparkles size={16} />
+              Inverse ROM Optimization
+            </button>
+            <button
               onClick={handleScore}
               disabled={isScoring}
-              className="bg-gradient-signature text-white px-8 py-3 rounded-xl font-bold text-[12px] uppercase tracking-wider shadow-btn-primary hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+              className="bg-gradient-signature text-white px-10 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest shadow-btn-primary hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+            >
               {isScoring ? <RefreshCw size={16} className="animate-spin" /> : <Play size={16} />}
-              {isScoring ? 'Scoring...' : 'Score Now'}
+              {isScoring ? 'Inference Running...' : 'Execute Simulation'}
             </button>
           </div>
         </div>
 
         {/* Right: Results */}
-        <div className="col-span-1 bg-bg-50 rounded-xl p-6 border border-border shadow-sm flex flex-col">
-          <h3 className="font-sans text-[11px] text-text-muted font-black uppercase tracking-widest mb-6">Result</h3>
-          
+        <div className="bg-white rounded-[24px] p-8 shadow-premium border border-slate-200/60 flex flex-col">
+          <div className="flex items-center gap-2 mb-8">
+            <ShieldAlert size={18} className="text-[#0066CC]" />
+            <h3 className="font-sans text-[11px] text-slate-400 font-black uppercase tracking-widest">Inference Result</h3>
+          </div>
+
           {!result ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center text-text-muted">
-              <div className="w-16 h-16 rounded-full border-4 border-dashed border-border flex items-center justify-center mb-4">
-                <Play size={24} className="text-border ml-1" />
+            <div className="flex-1 flex flex-col items-center justify-center text-center text-slate-300">
+              <div className="w-20 h-20 rounded-3xl border-4 border-dashed border-slate-100 flex items-center justify-center mb-6">
+                <Database size={32} className="text-slate-200" />
               </div>
-              <p className="text-[11px] font-bold uppercase tracking-widest">Submit parameters<br/>to see results</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] leading-relaxed">
+                Awaiting Parameter<br />Neural Ingestion
+              </p>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col animate-fade-in">
-              {/* Gauge Area */}
-              <div className="flex flex-col items-center mb-6">
-                <div className="relative w-28 h-28 mb-3">
-                  {/* SVG Gauge Background */}
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="var(--bg-200)" strokeWidth="10" strokeDasharray="283" strokeDashoffset="0" />
-                    <circle 
-                      cx="50" cy="50" r="45" fill="none" 
-                      stroke={result.riskScore > 50 ? "var(--block)" : "var(--approve)"} 
-                      strokeWidth="10" 
-                      strokeDasharray="283" 
-                      strokeDashoffset={283 - (283 * result.riskScore) / 100} 
-                      className="transition-all duration-1000 ease-out"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className={clsx("text-3xl font-black", result.riskScore > 50 ? "text-rose-500" : "text-emerald-500")}>
-                      {result.riskScore}
-                    </span>
-                    <span className="text-[8px] font-bold text-text-muted uppercase tracking-widest mt-0.5">Risk Score</span>
-                  </div>
+            <div className="flex-1 flex flex-col animate-pop-out">
+              {/* Score Hero */}
+              <div className="flex flex-col items-center mb-8 bg-slate-50/50 rounded-3xl p-6 border border-slate-100">
+                <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Ensemble Risk Index</div>
+                <div className={clsx(
+                  "text-6xl font-black font-mono leading-none tracking-tighter mb-4",
+                  result.riskScore > 50 ? "text-red-600" : "text-[#00A3AD]"
+                )}>
+                  {result.riskScore}<span className="text-2xl opacity-30">.0</span>
                 </div>
-                
-                <div className={clsx("px-4 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-wider", result.riskScore > 50 ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-emerald-50 text-emerald-600 border-emerald-200")}>
+                <div className={clsx(
+                  "px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-sm",
+                  result.riskScore > 50 ? "bg-red-600 text-white" : "bg-[#00A3AD] text-white"
+                )}>
                   {result.riskLevel}
                 </div>
               </div>
 
-              {/* Model Scores */}
-              <div className="space-y-3 mb-6">
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">LightGBM (10%)</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-20 h-1 bg-bg-200 rounded-full overflow-hidden">
-                       <div className="h-full bg-blue-500 rounded-full" style={{ width: `${result.models.lightgbm}%` }} />
+              {/* Shields Area */}
+              <div className="space-y-4 mb-8">
+                {Object.entries(result.models).map(([model, score]) => (
+                  <div key={model}>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{model} Shield</span>
+                      <span className="font-mono text-[11px] font-black text-slate-700">{score}%</span>
                     </div>
-                    <span className="text-[10px] font-black text-text-primary w-6 text-right">{result.models.lightgbm}</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">XGBoost (40%)</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-20 h-1 bg-bg-200 rounded-full overflow-hidden">
-                       <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${result.models.xgboost}%` }} />
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div 
+                        className={clsx("h-full rounded-full transition-all duration-1000", score > 60 ? "bg-red-500" : "bg-[#0066CC]")} 
+                        style={{ width: `${score}%` }} 
+                      />
                     </div>
-                    <span className="text-[10px] font-black text-text-primary w-6 text-right">{result.models.xgboost}</span>
                   </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Autoencoder (50%)</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-20 h-1 bg-bg-200 rounded-full overflow-hidden">
-                       <div className="h-full bg-amber-500 rounded-full" style={{ width: `${result.models.autoencoder}%` }} />
-                    </div>
-                    <span className="text-[10px] font-black text-text-primary w-6 text-right">{result.models.autoencoder}</span>
-                  </div>
-                </div>
+                ))}
               </div>
 
-              {/* Top Reasons */}
-              <div className="mt-auto">
-                <h4 className="text-[9px] font-black text-text-muted uppercase tracking-widest mb-2">Top Risk Factors</h4>
-                <ul className="space-y-1.5">
+              {/* Attribution */}
+              <div className="mt-auto pt-6 border-t border-slate-100">
+                <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Root Cause Attribution</h4>
+                <div className="space-y-2">
                   {result.reasons.map((reason, idx) => (
-                    <li key={idx} className="text-[10px] font-bold text-text-secondary flex items-start gap-1.5">
-                      <span className="text-rose-500 mt-0.5">•</span>
-                      <span className="leading-tight">{reason}</span>
-                    </li>
+                    <div key={idx} className="flex gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                      <AlertTriangle size={14} className="text-amber-500 shrink-0" />
+                      <span className="text-[10px] font-bold text-slate-600 leading-tight">{reason}</span>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Middle: SHAP Explanation (Full Width) */}
-      <div className="bg-bg-50 rounded-xl p-6 border border-border shadow-sm flex flex-col">
-        <div className="flex items-center gap-2 mb-6">
-          <BarChart2 size={16} className="text-text-muted" />
-          <h3 className="font-sans text-[11px] text-text-muted font-black uppercase tracking-widest">SHAP Explanation - Why This Score?</h3>
+      {/* Middle: SHAP Explanation */}
+      <div className="bg-white rounded-[24px] p-8 shadow-premium border border-slate-200/60">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
+            <BarChart2 size={18} />
+          </div>
+          <h3 className="font-sans text-[11px] text-slate-800 font-black uppercase tracking-widest">Neural Feature Contribution (SHAP)</h3>
         </div>
-        
+
         {!result ? (
-          <div className="flex-1 flex items-center justify-center text-[11px] font-bold text-text-muted uppercase tracking-widest border-2 border-dashed border-border rounded-xl">
-            Awaiting simulation results
+          <div className="h-32 flex items-center justify-center text-[11px] font-black text-slate-300 uppercase tracking-[0.2em] border-2 border-dashed border-slate-100 rounded-[24px]">
+            Execute Simulation to Generate Model Explanations
           </div>
         ) : (
-          <div className="flex flex-col justify-center flex-1 relative py-4">
-            {/* Center line */}
-            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-border z-0" />
-            
+          <div className="space-y-6">
             {result.shap.map((item, idx) => (
-              <div key={idx} className="flex items-center text-[10px] font-bold z-10 relative mb-4 last:mb-0">
-                <div className="w-1/2 pr-6 text-right truncate text-text-secondary uppercase tracking-wider">
-                  {item.feature}
+              <div key={idx} className="flex items-center gap-6">
+                <div className="w-32 text-right">
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{item.feature}</span>
                 </div>
-                <div className="w-1/2 pl-6 relative flex items-center">
-                  <div 
-                    className={clsx("h-6 rounded-sm shadow-sm", item.positive ? "bg-rose-500" : "bg-emerald-500 absolute right-full mr-6")}
-                    style={{ width: `${Math.abs(item.value) * 10}%` }}
-                  />
+                <div className="flex-1 flex items-center">
+                  <div className="flex-1 h-8 bg-slate-50 rounded-lg relative overflow-hidden flex items-center">
+                    <div className="absolute left-1/2 w-px h-full bg-slate-200 z-10" />
+                    <div 
+                      className={clsx(
+                        "h-full transition-all duration-1000",
+                        item.positive ? "bg-red-500/20 border-l-2 border-red-500" : "bg-[#00A3AD]/20 border-r-2 border-[#00A3AD] absolute right-1/2"
+                      )}
+                      style={{ width: `${Math.abs(item.value) * 5}%` }}
+                    />
+                  </div>
+                  <div className="w-16 ml-4">
+                    <span className={clsx("font-mono text-[11px] font-black", item.positive ? "text-red-500" : "text-[#00A3AD]")}>
+                      {item.positive ? '+' : '-'}{Math.abs(item.value).toFixed(1)}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}
-            
-            {/* Axis Labels */}
-            <div className="flex justify-between text-[9px] font-bold text-text-muted mt-4 border-t border-border pt-4 uppercase">
-               <span>-20.00 (Low Risk)</span>
-               <span>+0.00</span>
-               <span>+20.00 (High Risk)</span>
-            </div>
           </div>
         )}
-      </div>
-
-      {/* Bottom: Investigation Log */}
-      <div className="bg-bg-50 rounded-xl border border-border shadow-sm flex flex-col h-48 shrink-0">
-        <div className="p-4 border-b border-border flex items-center justify-between">
-           <div className="flex items-center gap-2 text-text-muted">
-             <AlertTriangle size={14} />
-             <h3 className="font-sans text-[11px] font-black tracking-widest uppercase">Simulation Log</h3>
-           </div>
-           <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
-             {result ? '1 entry' : '0 entries'}
-           </span>
-        </div>
-        
-        <div className="flex-1 overflow-auto">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-bg-50 sticky top-0">
-              <tr className="border-b border-border">
-                <th className="py-2 px-4 text-[9px] font-bold text-text-muted uppercase tracking-wider">Time</th>
-                <th className="py-2 px-4 text-[9px] font-bold text-text-muted uppercase tracking-wider">Process Type</th>
-                <th className="py-2 px-4 text-[9px] font-bold text-text-muted uppercase tracking-wider">Risk Score</th>
-                <th className="py-2 px-4 text-[9px] font-bold text-text-muted uppercase tracking-wider">Decision</th>
-                <th className="py-2 px-4 text-[9px] font-bold text-text-muted uppercase tracking-wider">Top Reason</th>
-              </tr>
-            </thead>
-            <tbody>
-              {!result ? (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-[10px] font-bold text-text-muted uppercase tracking-widest">
-                    No simulated units yet
-                  </td>
-                </tr>
-              ) : (
-                <tr className="border-b border-border hover:bg-bg-100">
-                  <td className="py-3 px-4 text-[11px] font-bold font-mono text-text-secondary">
-                    {new Date().toLocaleTimeString()}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="text-[10px] font-black text-cyan-600 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded uppercase tracking-wider">Full Assembly</span>
-                  </td>
-                  <td className="py-3 px-4 text-[11px] font-black text-rose-500">{result.riskScore}%</td>
-                  <td className="py-3 px-4">
-                    <span className="text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded uppercase tracking-wider">{result.riskLevel}</span>
-                  </td>
-                  <td className="py-3 px-4 text-[11px] font-bold text-text-secondary truncate max-w-xs">
-                    {result.reasons[0]}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
       </div>
 
     </div>

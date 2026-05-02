@@ -14,93 +14,18 @@ import { Play, Pause, Zap } from 'lucide-react'
 
 import { useYieldEngine } from './hooks/useYieldEngine'
 
+import Header from './components/layout/Header'
+
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
 
   const engine = useYieldEngine()
 
-  const tabNames = {
-    dashboard: 'WIP Dashboard: Active Batch Tracking',
-    investigation: 'Unit Investigation',
-    insights: 'Model Insights',
-    physics: 'Physics Sandbox',
-    tuning: 'Tuning',
-    parameter_lab: 'Parameter Tuning Lab',
-    retraining: 'Closed-Loop Retraining'
-  }
-
-  const isDashboard = activeTab === 'dashboard'
-
-
   return (
     <div className="flex h-screen bg-bg-base overflow-hidden">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       <div className="flex-1 flex flex-col h-full bg-grid-pattern bg-grid">
-
-        {/* Global Page Header */}
-        <header className={clsx(
-          "px-8 py-4 bg-white border-b flex items-center justify-between shrink-0 z-[100] relative transition-all duration-300",
-          isDashboard ? "border-blue-500/20 shadow-sm" : "border-border"
-        )}>
-          {/* Subtle Accent for Dashboard */}
-          {isDashboard && (
-            <div className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-blue-500 via-cyan-500 to-emerald-500 opacity-60" />
-          )}
-
-          <div className="flex flex-col relative z-10">
-            <h2 className="font-sans font-black text-[16px] text-text-primary uppercase tracking-widest">
-              {tabNames[activeTab] || activeTab}
-            </h2>
-            {isDashboard && (
-              <span className="font-sans text-[10px] text-text-muted uppercase tracking-[0.15em] font-black mt-0.5">
-                Live Production Floor • Fab 20 Digital Thread
-              </span>
-            )}
-
-            {activeTab === 'retraining' && (
-              <span className="font-sans text-[10px] text-text-muted uppercase tracking-[0.15em] font-black mt-0.5">
-                LABEL WAFERS / UNITS • RE-OPTIMIZE ENSEMBLE • DEPLOY
-              </span>
-            )}
-            {activeTab === 'parameter_lab' && (
-              <span className="font-sans text-[10px] text-text-muted uppercase tracking-[0.15em] font-black mt-0.5">
-                SINGLE UNIT SIMULATION • SHAP EXPLANATIONS • WHAT-IF ANALYSIS
-              </span>
-            )}
-          </div>
-
-
-
-          <div className="flex items-center gap-3 relative z-10">
-            {isDashboard ? (
-              <>
-                {engine.setIsRunning && (
-                  <button
-                    onClick={() => engine.setIsRunning(!engine.isRunning)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-amber-200 text-amber-600 bg-amber-50 hover:bg-amber-100 transition-colors"
-                  >
-                    {engine.isRunning ? <Pause size={12} /> : <Play size={12} />}
-                    {engine.isRunning ? 'Pause' : 'Resume'}
-                  </button>
-                )}
-                {engine.triggerExcursionBurst && (
-                  <button
-                    onClick={engine.triggerExcursionBurst}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
-                  >
-                    <Zap size={12} />
-                    Excursion Burst
-                  </button>
-                )}
-              </>
-            ) : (
-              <div className="flex flex-col items-end">
-                <span className="font-sans text-[9px] text-text-muted uppercase tracking-widest font-black">Environment</span>
-                <span className="font-sans text-[11px] text-text-primary font-black uppercase">Production Fab 20</span>
-              </div>
-            )}
-          </div>
-        </header>
+        <Header engine={engine} activeTab={activeTab} />
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
           {activeTab === 'dashboard' && <Dashboard engine={engine} />}
