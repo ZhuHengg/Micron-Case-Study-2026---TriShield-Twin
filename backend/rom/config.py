@@ -39,20 +39,32 @@ STAGE_PARAMS = {
 
 # --- NOMINAL VALUES FOR DEVIATION CALCULATIONS ---
 NOMINAL = {
+    # Stage 1 — Die Bond
     'bond_force': 30.0,
     'xy_placement_offset': 0.0,
     'bond_line_thickness': 25.0,
+    'epoxy_viscosity': 5000.0,
+    'pick_place_speed': 8000.0,
+    # Stage 2 — Wire Bond
     'ultrasonic_power': 1.2,
     'bond_time': 15.0,
     'loop_height': 200.0,
     'capillary_stroke_count': 0.0,
+    'efo_voltage': 60.0,
+    # Stage 3 — Mold
     'transfer_pressure': 8.0,
+    'clamping_force': 50.0,
     'molding_temperature': 180.0,
-    'vacuum_level': 0.0, # Ideal
+    'vacuum_level': 0.0,  # Ideal
+    # Stage 4 — Ball Attach
     'ball_placement_accuracy': 0.0,
+    'laser_pulse_energy': 12.0,
     'reflow_peak_temp': 260.0,
     'flux_density': 0.8,
+    # Stage 5 — Saw
     'spindle_current': 2.0,
     'vibration_amplitude': 0.0,
-    'blade_wear_index': 0.0
+    'blade_wear_index': 0.0,
+    'cooling_water_flow': 1.5,
 }
+

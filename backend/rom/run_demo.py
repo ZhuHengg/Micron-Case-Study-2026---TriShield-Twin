@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import pickle
 
-from lifecycle import compute_lifecycle
+from .lifecycle import compute_lifecycle
 
 def run_demo():
     print("="*60)

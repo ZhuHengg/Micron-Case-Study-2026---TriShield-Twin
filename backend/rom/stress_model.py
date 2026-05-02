@@ -1,5 +1,5 @@
 import numpy as np
-from config import GRID_SIZE, NOMINAL
+from .config import GRID_SIZE, NOMINAL
 
 def gaussian_hotspot(X, Y, cx, cy, sigma, amplitude):
     """Single 2D Gaussian centered at (cx, cy)."""

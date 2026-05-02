@@ -1,95 +1,196 @@
-import React, { useState, useMemo } from 'react';
-import { Activity, AlertTriangle, ShieldCheck, Zap, Server, SlidersHorizontal, Cpu, BookOpen } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Activity, AlertTriangle, ShieldCheck, Zap, Server, SlidersHorizontal, Cpu, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer, BarChart, Bar, Cell, YAxis as BarYAxis, XAxis as BarXAxis, LabelList } from 'recharts';
 import clsx from 'clsx';
 import Panel from '../components/shared/Panel';
+import { useROM } from '../hooks/useROM';
+
+const ROM_NOMINAL = {
+  bond_force: 30.0, xy_placement_offset: 0.0, bond_line_thickness: 25.0,
+  epoxy_viscosity: 5000, pick_place_speed: 8000,
+  ultrasonic_power: 1.2, bond_time: 15.0, loop_height: 200.0,
+  capillary_stroke_count: 0, efo_voltage: 60.0,
+  transfer_pressure: 8.0, clamping_force: 50.0, molding_temperature: 180.0, vacuum_level: 2.0,
+  ball_placement_accuracy: 0.0, laser_pulse_energy: 12.0, reflow_peak_temp: 260.0, flux_density: 0.8,
+  spindle_current: 2.0, vibration_amplitude: 0.0, blade_wear_index: 0.0, cooling_water_flow: 1.5,
+};
+
+const STAGE_CONFIG = [
+  { 
+    name: 'Die Bond', 
+    theme: 'blue', 
+    params: [
+      { key: 'bond_force', label: 'Bond Force (N)', min: 25, max: 35, step: 0.1 },
+      { key: 'xy_placement_offset', label: 'XY Offset (µm)', min: -15, max: 15, step: 0.1 },
+      { key: 'bond_line_thickness', label: 'Bond Line Thickness (µm)', min: 18, max: 32, step: 0.1 },
+      { key: 'epoxy_viscosity', label: 'Epoxy Viscosity (cP)', min: 4000, max: 6000, step: 10 },
+      { key: 'pick_place_speed', label: 'Pick Place Speed (mm/s)', min: 6000, max: 10000, step: 100 }
+    ]
+  },
+  { 
+    name: 'Wire Bond', 
+    theme: 'purple', 
+    params: [
+      { key: 'ultrasonic_power', label: 'Ultrasonic Power (W)', min: 0.8, max: 1.6, step: 0.01 },
+      { key: 'bond_time', label: 'Bond Time (ms)', min: 10, max: 20, step: 0.1 },
+      { key: 'loop_height', label: 'Loop Height (µm)', min: 150, max: 250, step: 1 },
+      { key: 'capillary_stroke_count', label: 'Capillary Strokes', min: 0, max: 500000, step: 1000 },
+      { key: 'efo_voltage', label: 'EFO Voltage (V)', min: 50, max: 70, step: 0.1 }
+    ]
+  },
+  { 
+    name: 'Mold', 
+    theme: 'amber', 
+    params: [
+      { key: 'transfer_pressure', label: 'Transfer Pressure (MPa)', min: 5, max: 15, step: 0.1 },
+      { key: 'clamping_force', label: 'Clamping Force (kN)', min: 40, max: 60, step: 0.5 },
+      { key: 'molding_temperature', label: 'Molding Temp (°C)', min: 160, max: 190, step: 0.5 },
+      { key: 'vacuum_level', label: 'Vacuum Level (mbar)', min: 0, max: 10, step: 0.1 }
+    ]
+  },
+  { 
+    name: 'Ball Attach', 
+    theme: 'cyan', 
+    params: [
+      { key: 'ball_placement_accuracy', label: 'Ball Placement Acc. (µm)', min: -25, max: 25, step: 0.5 },
+      { key: 'laser_pulse_energy', label: 'Laser Pulse Energy (mJ)', min: 10, max: 14, step: 0.1 },
+      { key: 'reflow_peak_temp', label: 'Reflow Peak Temp (°C)', min: 240, max: 280, step: 1 },
+      { key: 'flux_density', label: 'Flux Density (mg/cm²)', min: 0.5, max: 1.1, step: 0.01 }
+    ]
+  },
+  { 
+    name: 'Saw', 
+    theme: 'pink', 
+    params: [
+      { key: 'spindle_current', label: 'Spindle Current (A)', min: 1.5, max: 2.5, step: 0.01 },
+      { key: 'vibration_amplitude', label: 'Vibration Amplitude (mm)', min: 0, max: 1.5, step: 0.01 },
+      { key: 'blade_wear_index', label: 'Blade Wear Index', min: 0, max: 1, step: 0.01 },
+      { key: 'cooling_water_flow', label: 'Cooling Water Flow (L/min)', min: 1.0, max: 2.0, step: 0.01 }
+    ]
+  }
+];
+
+const ROM_STAGE_COLORS_MAP = {
+  'Die Bond': '#2563eb', 'Wire Bond': '#7c3aed', 'Mold': '#d97706', 'Ball Attach': '#0891b2', 'Saw': '#ec4899'
+}
+
+function StressHeatmapCanvas({ stressGrid, maxStress }) {
+  const canvasRef = useRef(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas || !stressGrid || stressGrid.length === 0) return
+    const ctx = canvas.getContext('2d')
+    const gridSize = stressGrid.length
+    const cellW = canvas.width / gridSize
+    const cellH = canvas.height / gridSize
+    const max = maxStress || 1
+
+    for (let row = 0; row < gridSize; row++) {
+      for (let col = 0; col < gridSize; col++) {
+        const val = stressGrid[row][col]
+        const norm = Math.min(val / max, 1)
+        const hue = (1 - norm) * 240 // blue → red
+        ctx.fillStyle = `hsl(${hue}, 100%, 45%)`
+        ctx.fillRect(col * cellW, row * cellH, cellW + 0.5, cellH + 0.5)
+      }
+    }
+  }, [stressGrid, maxStress])
+
+  return (
+    <canvas 
+      ref={canvasRef} 
+      width={250} 
+      height={250} 
+      className="rounded-lg border border-border shadow-inner"
+      style={{ imageRendering: 'pixelated' }}
+    />
+  )
+}
+
+const formatParam = (name) => name.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 
 export default function PhysicsInsights({ engine }) {
-  // Sandbox State
-  const [moldingTemp, setMoldingTemp] = useState(175);
-  const [vacuumLevel, setVacuumLevel] = useState(95);
-  const [transferPressure, setTransferPressure] = useState(10);
+  const [params, setParams] = useState(ROM_NOMINAL);
+  const [expandedStage, setExpandedStage] = useState('Mold');
 
-  // Dynamic Prediction Logic
-  const predictedCRI = useMemo(() => {
-    let cri = 0.3; // Default baseline
-    cri += (moldingTemp - 175) * 0.015;
-    cri += (95 - vacuumLevel) * 0.01;
-    cri += (transferPressure - 10) * 0.02;
-    return Math.max(0, Math.min(1.0, cri));
-  }, [moldingTemp, vacuumLevel, transferPressure]);
+  const { romResult, isLoading } = useROM(params);
 
-  const isCritical = predictedCRI > 0.6;
+  // Derive all visuals from ROM result
+  const predictedCRI = romResult?.cri_lifecycle?.cumulative_cri[4] || 0;
+  const isCritical = predictedCRI >= 0.6;
+  const reconstructionTimeMs = romResult?.rom_metadata?.reconstruction_time_ms || 0;
+  const podModes = romResult?.rom_metadata?.pod_modes_used || 8;
 
-  // Component B: CRI Lifecycle Data
-  const criData = useMemo(() => [
-    { stage: 'Die Bond', cri: 0.1 },
-    { stage: 'Wire Bond', cri: 0.15 },
-    { stage: 'Mold', cri: 0.15 + (predictedCRI - 0.3) * 0.4 },
-    { stage: 'Ball Attach', cri: 0.2 + (predictedCRI - 0.3) * 0.7 },
-    { stage: 'Saw Singulation', cri: predictedCRI },
-  ].map(d => ({ ...d, cri: Math.max(0, Math.min(1, d.cri)) })), [predictedCRI]);
+  const criData = useMemo(() => {
+    if (!romResult) return [];
+    return romResult.cri_lifecycle.stages.map((stage, i) => ({
+      stage,
+      cri: romResult.cri_lifecycle.cumulative_cri[i],
+      delta: romResult.cri_lifecycle.stage_deltas[i]
+    }));
+  }, [romResult]);
 
-  // Component C: Root Cause Data
-  const rootCauseData = [
-    { name: 'Molding Temp', value: 42, color: '#ef4444' },
-    { name: 'Vacuum Level', value: 23, color: '#f59e0b' },
-    { name: 'Transfer Pressure', value: 12, color: '#3b82f6' },
-    { name: 'Other', value: 23, color: '#9ca3af' },
-  ];
+  const spikeIdx = useMemo(() => {
+    if (!romResult) return -1;
+    const deltas = romResult.cri_lifecycle.stage_deltas;
+    return deltas.indexOf(Math.max(...deltas));
+  }, [romResult]);
 
-  // Component A: Heatmap Data
-  const heatmapCells = useMemo(() => {
-    return Array.from({ length: 100 }, (_, i) => {
-      const x = i % 10;
-      const y = Math.floor(i / 10);
-      const dist00 = Math.sqrt(x * x + y * y);
-      const dist09 = Math.sqrt(x * x + (9 - y) * (9 - y));
-      const dist90 = Math.sqrt((9 - x) * (9 - x) + y * y);
-      const dist99 = Math.sqrt((9 - x) * (9 - x) + (9 - y) * (9 - y));
-      const minDist = Math.min(dist00, dist09, dist90, dist99);
-      
-      let stress = (12 - minDist) / 12;
-      stress = stress * (predictedCRI / 0.3); // Scale stress by CRI
-      stress = Math.max(0, Math.min(1, stress));
-      
-      // Interpolate Hue: 240 (Blue) -> 0 (Red)
-      const hue = (1 - stress) * 240;
-      return { id: i, color: `hsl(${hue}, 100%, 45%)` };
-    });
-  }, [predictedCRI]);
+  const rootCauseData = useMemo(() => {
+    if (!romResult) return [];
+    return Object.entries(romResult.root_cause.stage_contributions).map(([name, val]) => ({
+      name,
+      value: Math.round(val * 100),
+      color: ROM_STAGE_COLORS_MAP[name] || '#9ca3af'
+    }));
+  }, [romResult]);
 
-  // Physics Explanations Mapping
-  const physicsExplanations = {
-    'Molding Temp': {
-      deviation: "+8°C above nominal",
-      effect: "CTE mismatch → thermal stress at die-mold interface",
-      location: "center region",
-      color: "text-red-600",
-      bg: "bg-red-50"
-    },
-    'Vacuum Level': {
-      deviation: "-15% below target",
-      effect: "Void formation → increased acoustic impedance",
-      location: "corner regions",
-      color: "text-amber-600",
-      bg: "bg-amber-50"
-    },
-    'Transfer Pressure': {
-      deviation: "+2.5 MPa surge",
-      effect: "Wire sweep → potential shorting at lead-frame",
-      location: "peripheral bond pads",
-      color: "text-blue-600",
-      bg: "bg-blue-50"
-    },
-    'Other': {
-      deviation: "Nominal variance",
-      effect: "Composite minor stresses",
-      location: "global distribution",
-      color: "text-slate-600",
-      bg: "bg-slate-50"
-    }
-  };
+  const physicsExplanations = useMemo(() => {
+    if (!romResult) return [];
+    const stageAttr = romResult.root_cause.stage_contributions;
+    const sensitivities = romResult.root_cause.parameter_contributions;
+    
+    const primaryStage = Object.keys(stageAttr)[0];
+    const primaryParam = Object.keys(sensitivities)[0];
+
+    return [
+      {
+        title: primaryStage || 'Mold',
+        contribution: stageAttr[primaryStage] ? `${(stageAttr[primaryStage] * 100).toFixed(0)}%` : '—',
+        deviation: `${formatParam(primaryParam || '')} deviated from nominal`,
+        effect: primaryStage === 'Die Bond' ? 'Bond force deviation → epoxy void / delamination risk at die-mold interface' :
+                primaryStage === 'Wire Bond' ? 'Ultrasonic power/capillary wear → weak wire bonds, potential lift-off' :
+                primaryStage === 'Mold' ? 'CTE mismatch → thermal stress at die-mold interface, void formation' :
+                primaryStage === 'Ball Attach' ? 'Thermal overshoot → solder joint fatigue, intermetallic fracture' :
+                'Blade wear × vibration → edge chipping, kerf damage',
+        location: primaryStage === 'Die Bond' ? 'Die center + corners' :
+                  primaryStage === 'Wire Bond' ? 'Bond pad ring periphery' :
+                  primaryStage === 'Mold' ? 'Center + void concentrators' :
+                  primaryStage === 'Ball Attach' ? 'BGA ball grid (bottom)' :
+                  'Package perimeter edges',
+        color: 'text-red-600', bg: 'bg-red-50', borderColor: 'border-red-200',
+      },
+      {
+        title: Object.keys(stageAttr)[1] || 'Wire Bond',
+        contribution: stageAttr[Object.keys(stageAttr)[1]] ? `${(stageAttr[Object.keys(stageAttr)[1]] * 100).toFixed(0)}%` : '—',
+        deviation: 'Secondary stress contributor',
+        effect: 'Compound interaction with primary stage increases cumulative failure probability',
+        location: 'Distributed across affected regions',
+        color: 'text-amber-600', bg: 'bg-amber-50', borderColor: 'border-amber-200',
+      },
+      {
+        title: 'Cumulative RRS',
+        contribution: `${(predictedCRI * 100).toFixed(0)}%`,
+        deviation: `Final CRI: ${predictedCRI.toFixed(4)}`,
+        effect: isCritical ? 'Tolerance stack exceeds critical threshold — unit at high risk of burn-in failure' : 'Cumulative stress within acceptable envelope',
+        location: 'Global — all stages contribute',
+        color: isCritical ? 'text-red-600' : 'text-emerald-600',
+        bg: isCritical ? 'bg-red-50' : 'bg-emerald-50',
+        borderColor: isCritical ? 'border-red-200' : 'border-emerald-200',
+      },
+    ]
+  }, [romResult, predictedCRI, isCritical]);
 
   const Badge = ({ label, icon: Icon, className }) => (
     <div className={clsx("flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-wider", className)}>
@@ -103,19 +204,19 @@ export default function PhysicsInsights({ engine }) {
       {/* Zone 1: Engineering Status Badges */}
       <div className="flex flex-wrap gap-3 bg-white p-4 rounded-2xl border border-border shadow-sm">
           <Badge 
-            label="ROM Reconstruction Time: 12ms" 
+            label={`ROM Reconstruction Time: ${reconstructionTimeMs.toFixed(1)}ms`} 
             icon={Zap} 
             className="bg-blue-500/10 text-blue-500 border-blue-500/30 shadow-glow-cyan"
           />
           <Badge 
-            label="Current Unit: DIE-899A" 
+            label="Current Unit: SANDBOX" 
             icon={Cpu} 
             className="bg-bg-base text-text-primary border-border"
           />
           <Badge 
-            label="System Status: LIVE INFERENCE" 
+            label={`POD Modes: ${podModes}`} 
             icon={Activity} 
-            className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 animate-pulse-slow"
+            className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
           />
       </div>
 
@@ -123,26 +224,25 @@ export default function PhysicsInsights({ engine }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Component A: 2D Stress Distribution Heatmap */}
-        <Panel title="2D Stress Distribution Heatmap" className="lg:col-span-1 flex flex-col items-center justify-center p-6">
-          <div className="w-64 h-64 grid grid-cols-10 grid-rows-10 gap-0.5 mb-4 p-1 bg-black/5 border border-border rounded-lg shadow-inner">
-            {heatmapCells.map(cell => (
-              <div 
-                key={cell.id} 
-                className="w-full h-full rounded-sm transition-colors duration-300"
-                style={{ backgroundColor: cell.color }}
-              />
-            ))}
-          </div>
-          <div className="text-center space-y-1">
-            <p className="text-[10px] text-text-muted uppercase tracking-widest font-bold">
-              Reconstructed in 12ms via Singular Value Decomposition
-            </p>
-            <div className="flex items-center justify-center gap-2 text-[10px] uppercase text-text-muted mt-2 font-bold">
-              <span>Low Stress</span>
-              <div className="w-24 h-2 bg-gradient-to-r from-blue-600 to-red-600 rounded-full opacity-70" />
-              <span>High Stress</span>
+        <Panel title="2D Stress Distribution Heatmap" className="lg:col-span-1 flex flex-col items-center justify-center p-6 min-h-[340px]">
+          {romResult?.stress_map ? (
+            <div className="flex flex-col items-center justify-center">
+              <StressHeatmapCanvas stressGrid={romResult.stress_map.values} maxStress={romResult.stress_map.max_stress_mpa} />
+              <div className="mt-3 w-full space-y-2">
+                <div className="flex items-center justify-center gap-2 text-[9px] uppercase text-text-muted font-bold">
+                  <span>Low Stress</span>
+                  <div className="w-24 h-2 bg-gradient-to-r from-blue-600 to-red-600 rounded-full opacity-70" />
+                  <span>High Stress</span>
+                </div>
+                <div className="flex justify-between text-[10px] font-bold text-text-muted px-2 w-[250px]">
+                  <span>Max: <span className={clsx("font-black", romResult.stress_map.max_stress_mpa > 150 ? "text-red-500" : "text-text-primary")}>{romResult.stress_map.max_stress_mpa.toFixed(1)} MPa</span></span>
+                  <span>Mean: <span className="font-black text-text-primary">{romResult.stress_map.mean_stress_mpa.toFixed(1)} MPa</span></span>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="text-sm text-text-muted">Waiting for ROM data...</div>
+          )}
         </Panel>
 
         {/* Component B: CRI Lifecycle Trajectory */}
@@ -166,8 +266,7 @@ export default function PhysicsInsights({ engine }) {
                 />
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#1e293b', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
-                  itemStyle={{ color: '#1e293b', fontWeight: 'bold' }}
-                  labelStyle={{ color: '#64748b', fontSize: '10px', textTransform: 'uppercase', fontWeight: 'bold' }}
+                  formatter={(val) => [val.toFixed(4), 'CRI']}
                 />
                 <ReferenceLine 
                   y={0.6} 
@@ -181,8 +280,19 @@ export default function PhysicsInsights({ engine }) {
                   dataKey="cri" 
                   stroke={isCritical ? "#ef4444" : "#3b82f6"} 
                   strokeWidth={3} 
-                  dot={{ r: 4, fill: isCritical ? "#ef4444" : "#3b82f6", strokeWidth: 0 }}
-                  activeDot={{ r: 6 }}
+                  dot={(props) => {
+                    const { cx, cy, index } = props;
+                    const isSpike = index === spikeIdx;
+                    return (
+                      <circle
+                        key={index} cx={cx} cy={cy}
+                        r={isSpike ? 6 : 4}
+                        fill={isCritical ? "#ef4444" : "#3b82f6"}
+                        stroke={isSpike ? "#fff" : "none"}
+                        strokeWidth={isSpike ? 2 : 0}
+                      />
+                    );
+                  }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -201,11 +311,12 @@ export default function PhysicsInsights({ engine }) {
                   dataKey="name" 
                   stroke="#94a3b8" 
                   tick={{ fontSize: 11, fill: '#1e293b', fontWeight: 'bold' }}
-                  width={120}
+                  width={90}
                 />
                 <Tooltip 
                   cursor={{ fill: '#f8fafc' }}
                   contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+                  formatter={(val) => [`${val}%`, 'Contribution']}
                 />
                 <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={24}>
                   {rootCauseData.map((entry, index) => (
@@ -239,66 +350,10 @@ export default function PhysicsInsights({ engine }) {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Sliders Area */}
-          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-            
-            <div className="space-y-3 p-4 rounded-xl bg-slate-50/50 border border-border">
-              <div className="flex justify-between items-center">
-                <span className="text-[11px] font-black uppercase tracking-wider text-text-secondary">Molding Temperature (°C)</span>
-                <span className="px-2 py-1 rounded bg-blue-50 text-blue-600 border border-blue-100 text-xs font-black font-sans shadow-sm">{moldingTemp}</span>
-              </div>
-              <input 
-                type="range" 
-                min="160" max="190" 
-                value={moldingTemp} 
-                onChange={(e) => setMoldingTemp(Number(e.target.value))}
-                className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500" 
-              />
-              <div className="flex justify-between text-[10px] text-text-muted font-bold">
-                <span>160</span><span>190</span>
-              </div>
-            </div>
-
-            <div className="space-y-3 p-4 rounded-xl bg-slate-50/50 border border-border">
-              <div className="flex justify-between items-center">
-                <span className="text-[11px] font-black uppercase tracking-wider text-text-secondary">Vacuum Level (%)</span>
-                <span className="px-2 py-1 rounded bg-amber-50 text-amber-600 border border-amber-100 text-xs font-black font-sans shadow-sm">{vacuumLevel}</span>
-              </div>
-              <input 
-                type="range" 
-                min="80" max="100" 
-                value={vacuumLevel} 
-                onChange={(e) => setVacuumLevel(Number(e.target.value))}
-                className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-amber-500" 
-              />
-              <div className="flex justify-between text-[10px] text-text-muted font-bold">
-                <span>80</span><span>100</span>
-              </div>
-            </div>
-
-            <div className="space-y-3 p-4 rounded-xl bg-slate-50/50 border border-border sm:col-span-2 lg:col-span-1">
-              <div className="flex justify-between items-center">
-                <span className="text-[11px] font-black uppercase tracking-wider text-text-secondary">Transfer Pressure (MPa)</span>
-                <span className="px-2 py-1 rounded bg-purple-50 text-purple-600 border border-purple-100 text-xs font-black font-sans shadow-sm">{transferPressure}</span>
-              </div>
-              <input 
-                type="range" 
-                min="5" max="15" step="0.1"
-                value={transferPressure} 
-                onChange={(e) => setTransferPressure(Number(e.target.value))}
-                className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-500" 
-              />
-              <div className="flex justify-between text-[10px] text-text-muted font-bold">
-                <span>5.0</span><span>15.0</span>
-              </div>
-            </div>
-
-          </div>
-
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Output Display */}
           <div className={clsx(
-            "md:col-span-1 flex flex-col items-center justify-center p-6 rounded-2xl border relative overflow-hidden transition-colors duration-300 shadow-sm",
+            "lg:col-span-1 flex flex-col items-center justify-center p-6 rounded-2xl border relative overflow-hidden transition-colors duration-300 shadow-sm",
             isCritical ? "bg-red-50 border-red-200" : "bg-emerald-50 border-emerald-200"
           )}>
             <h3 className={clsx(
@@ -306,7 +361,7 @@ export default function PhysicsInsights({ engine }) {
               isCritical ? "text-red-600/70" : "text-emerald-600/70"
             )}>Predicted CRI Score</h3>
             <div 
-              className="text-7xl font-black tracking-tighter tabular-nums z-10 transition-colors duration-300"
+              className="text-6xl xl:text-7xl font-black tracking-tighter tabular-nums z-10 transition-colors duration-300"
               style={{ color: isCritical ? '#dc2626' : '#059669' }}
             >
               {predictedCRI.toFixed(3)}
@@ -322,6 +377,64 @@ export default function PhysicsInsights({ engine }) {
                 </span>
               )}
             </div>
+            {isLoading && (
+              <div className="absolute top-2 right-2 flex items-center gap-1 bg-white/80 px-2 py-1 rounded text-[9px] font-black text-blue-600 border border-blue-200">
+                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping" />
+                SYNCING...
+              </div>
+            )}
+          </div>
+
+          {/* Sliders Area (22 parameters) */}
+          <div className="lg:col-span-3 space-y-4">
+            {STAGE_CONFIG.map((stage) => {
+              const themeClasses = {
+                blue: { bg: 'bg-blue-500', text: 'text-blue-600', badgeBg: 'bg-blue-50', border: 'border-blue-100', accent: 'accent-blue-500' },
+                purple: { bg: 'bg-purple-500', text: 'text-purple-600', badgeBg: 'bg-purple-50', border: 'border-purple-100', accent: 'accent-purple-500' },
+                amber: { bg: 'bg-amber-500', text: 'text-amber-600', badgeBg: 'bg-amber-50', border: 'border-amber-100', accent: 'accent-amber-500' },
+                cyan: { bg: 'bg-cyan-500', text: 'text-cyan-600', badgeBg: 'bg-cyan-50', border: 'border-cyan-100', accent: 'accent-cyan-500' },
+                pink: { bg: 'bg-pink-500', text: 'text-pink-600', badgeBg: 'bg-pink-50', border: 'border-pink-100', accent: 'accent-pink-500' },
+              }[stage.theme];
+
+              return (
+              <div key={stage.name} className="border border-border rounded-xl overflow-hidden bg-slate-50/30">
+                <button 
+                  className="w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-colors focus:outline-none"
+                  onClick={() => setExpandedStage(expandedStage === stage.name ? null : stage.name)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={clsx("w-3 h-3 rounded-full", themeClasses.bg)} />
+                    <span className="text-xs font-black uppercase tracking-widest text-text-primary">{stage.name}</span>
+                  </div>
+                  {expandedStage === stage.name ? <ChevronUp size={18} className="text-text-muted" /> : <ChevronDown size={18} className="text-text-muted" />}
+                </button>
+                
+                {expandedStage === stage.name && (
+                  <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-border bg-slate-50/50">
+                    {stage.params.map(param => (
+                      <div key={param.key} className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[11px] font-black uppercase tracking-wider text-text-secondary">{param.label}</span>
+                          <span className={clsx("px-2 py-1 rounded border text-xs font-black font-sans shadow-sm", themeClasses.badgeBg, themeClasses.text, themeClasses.border)}>
+                            {Number(params[param.key]).toFixed(param.step < 1 ? 2 : 0)}
+                          </span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min={param.min} max={param.max} step={param.step}
+                          value={params[param.key]} 
+                          onChange={(e) => setParams(p => ({ ...p, [param.key]: Number(e.target.value) }))}
+                          className={clsx("w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer", themeClasses.accent)} 
+                        />
+                        <div className="flex justify-between text-[9px] text-text-muted font-bold">
+                          <span>{param.min}</span><span>{param.max}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )})}
           </div>
 
         </div>
@@ -336,37 +449,34 @@ export default function PhysicsInsights({ engine }) {
           <h2 className="text-sm font-black tracking-widest text-text-primary uppercase">Physics-Based Diagnostic Explanations</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {rootCauseData.map((item) => {
-            const explanation = physicsExplanations[item.name] || physicsExplanations['Other'];
-            return (
-              <div key={item.name} className={clsx("p-4 rounded-xl border border-slate-100 shadow-sm bg-slate-50/30")}>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-text-primary">{item.name}</span>
-                  <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-white border border-border text-text-muted">
-                    {item.value}% Contrib.
-                  </span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {physicsExplanations.map((item) => (
+            <div key={item.title} className={clsx("p-4 rounded-xl border border-slate-100 shadow-sm", item.bg, item.borderColor)}>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-black uppercase tracking-wider text-text-primary">{item.title}</span>
+                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-white border border-border text-text-muted">
+                  {item.contribution} Contrib.
+                </span>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-[9px] uppercase tracking-widest text-text-muted font-black mb-0.5">Deviation</p>
+                  <p className={clsx("text-xs font-black font-sans", item.color)}>{item.deviation}</p>
                 </div>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-[9px] uppercase tracking-widest text-text-muted font-black mb-0.5">Deviation</p>
-                    <p className={clsx("text-xs font-black font-sans", explanation.color)}>{explanation.deviation}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] uppercase tracking-widest text-text-muted font-black mb-0.5">Physical Effect</p>
-                    <p className="text-xs text-text-secondary leading-relaxed font-bold">{explanation.effect}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] uppercase tracking-widest text-text-muted font-black mb-0.5">Impact Area</p>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <div className="w-2 h-2 rounded-full bg-blue-500/40" />
-                      <p className="text-[10px] text-text-muted font-black uppercase tracking-tight italic">{explanation.location}</p>
-                    </div>
+                <div>
+                  <p className="text-[9px] uppercase tracking-widest text-text-muted font-black mb-0.5">Physical Effect</p>
+                  <p className="text-xs text-text-secondary leading-relaxed font-bold">{item.effect}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] uppercase tracking-widest text-text-muted font-black mb-0.5">Impact Area</p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <div className="w-2 h-2 rounded-full bg-blue-500/40" />
+                    <p className="text-[10px] text-text-muted font-black uppercase tracking-tight italic">{item.location}</p>
                   </div>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </Panel>
 

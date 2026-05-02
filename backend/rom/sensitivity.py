@@ -1,5 +1,5 @@
 import numpy as np
-from config import PARAM_COLUMNS, STAGE_PARAMS
+from .config import PARAM_COLUMNS, STAGE_PARAMS
 
 def predict_coefficients(params_dict, coeff_model, scaler, poly=None):
     """Predicts POD coefficients from process parameters."""

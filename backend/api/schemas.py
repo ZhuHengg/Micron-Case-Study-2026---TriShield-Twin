@@ -58,6 +58,37 @@ class UnitTelemetry(BaseModel):
     resin_batch_risk_score: float = Field(default=0.0)
 
 
+class ROMSimulateRequest(BaseModel):
+    """Process parameters for ROM stress reconstruction."""
+    # Stage 1 — Die Bond
+    bond_force: float = Field(default=30.0)
+    xy_placement_offset: float = Field(default=0.0)
+    bond_line_thickness: float = Field(default=25.0)
+    epoxy_viscosity: float = Field(default=5000.0)
+    pick_place_speed: float = Field(default=8000.0)
+    # Stage 2 — Wire Bond
+    ultrasonic_power: float = Field(default=1.2)
+    bond_time: float = Field(default=15.0)
+    loop_height: float = Field(default=200.0)
+    capillary_stroke_count: float = Field(default=0.0)
+    efo_voltage: float = Field(default=60.0)
+    # Stage 3 — Mold
+    transfer_pressure: float = Field(default=8.0)
+    clamping_force: float = Field(default=50.0)
+    molding_temperature: float = Field(default=180.0)
+    vacuum_level: float = Field(default=2.0)
+    # Stage 4 — Ball Attach
+    ball_placement_accuracy: float = Field(default=0.0)
+    laser_pulse_energy: float = Field(default=12.0)
+    reflow_peak_temp: float = Field(default=260.0)
+    flux_density: float = Field(default=0.8)
+    # Stage 5 — Saw
+    spindle_current: float = Field(default=2.0)
+    vibration_amplitude: float = Field(default=0.0)
+    blade_wear_index: float = Field(default=0.0)
+    cooling_water_flow: float = Field(default=1.5)
+
+
 class ExplainRequest(BaseModel):
     """Request schema for asking why a unit was flagged."""
     unit_data: UnitTelemetry

@@ -4,9 +4,13 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+import numpy as np
+import pickle
+
 # Import our custom Inference Engine and Schemas
 from api.inference import EnsembleEngine
-from api.schemas import UnitTelemetry, RiskResponse, ExplainRequest, ExplainResponse
+from api.schemas import UnitTelemetry, RiskResponse, ExplainRequest, ExplainResponse, ROMSimulateRequest
+from rom.lifecycle import compute_lifecycle
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -30,7 +34,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ─── 3. LOAD TRI-SHIELD ENGINE ──────────────────────────────────────────
+# ─── 3. LOAD TRI-SHIELD ENGINE & ROM ────────────────────────────────────
+try:
+    pod_modes = np.load('rom/artifacts/pod_modes.npy')
+    mean_field = np.load('rom/artifacts/mean_field.npy')
+    with open('rom/artifacts/coeff_model.pkl', 'rb') as f:
+        rom_data = pickle.load(f)
+        coeff_model = rom_data['model']
+        rom_scaler = rom_data['scaler']
+        rom_poly = rom_data.get('poly', None)
+    logger.info("ROM artifacts loaded successfully.")
+except Exception as e:
+    logger.error(f"Failed to load ROM artifacts: {e}")
+    pod_modes = mean_field = coeff_model = rom_scaler = rom_poly = None
+
 logger.info("Initializing Tri-Shield Ensemble Engine...")
 try:
     engine = EnsembleEngine(
@@ -102,6 +119,20 @@ def explain_decision(request: ExplainRequest):
 
     except Exception as e:
         logger.error(f"Explanation failed for unit {request.unit_data.unit_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/rom/simulate")
+def rom_simulate(params: ROMSimulateRequest):
+    if pod_modes is None:
+        raise HTTPException(status_code=503, detail="ROM artifacts not loaded")
+    try:
+        result = compute_lifecycle(
+            params.model_dump(), pod_modes, mean_field,
+            coeff_model, rom_scaler, rom_poly
+        )
+        return result
+    except Exception as e:
+        logger.error(f"ROM simulation failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ─── GLOBAL EXCEPTION HANDLER ───────────────────────────────────────────

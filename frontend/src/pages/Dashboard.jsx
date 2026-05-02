@@ -54,6 +54,68 @@ const SENSOR_NOMINALS = {
 
 const formatParam = (name) => name.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 
+function GaugeChart({ score, decision }) {
+  const radius = 60;
+  const strokeWidth = 12;
+  const cx = 80;
+  const cy = 70;
+  const circumference = Math.PI * radius;
+  // score is 0 to 10
+  const normalizedScore = Math.min(Math.max(score, 0), 10);
+  const fillPercentage = normalizedScore / 10;
+  const strokeDashoffset = circumference - (fillPercentage * circumference);
+
+  let color = "#10b981"; // emerald
+  if (decision === 'REVIEW' || (score >= 4 && score < 7)) color = "#f59e0b"; // amber
+  if (decision === 'REJECT' || score >= 7) color = "#ef4444"; // red
+
+  const angle = (fillPercentage * 180) - 90; // -90 to 90
+
+  return (
+    <div className="relative flex flex-col items-center justify-center w-[160px] h-[90px]">
+      <svg className="w-full h-full overflow-visible" viewBox="0 0 160 80">
+        <defs>
+          <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#10b981" />
+            <stop offset="50%" stopColor="#f59e0b" />
+            <stop offset="100%" stopColor="#ef4444" />
+          </linearGradient>
+        </defs>
+        {/* Background Arc */}
+        <path
+          d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
+          fill="none"
+          stroke="#e2e8f0"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+        />
+        {/* Foreground Arc */}
+        <path
+          d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
+          fill="none"
+          stroke="url(#gaugeGradient)"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          className="transition-all duration-1000 ease-out"
+        />
+        {/* Needle */}
+        <g transform={`rotate(${angle}, ${cx}, ${cy})`} className="transition-all duration-1000 ease-out">
+          <polygon points={`${cx - 4},${cy} ${cx + 4},${cy} ${cx},${cy - radius + 10}`} fill="#334155" />
+          <circle cx={cx} cy={cy} r="6" fill="#334155" />
+          <circle cx={cx} cy={cy} r="2" fill="#ffffff" />
+        </g>
+      </svg>
+      <div className="absolute bottom-[-20px] text-center w-full">
+         <span className={clsx("text-3xl font-black font-sans leading-none", 
+            decision === 'REJECT' ? 'text-red-600' : decision === 'REVIEW' ? 'text-amber-600' : 'text-emerald-600'
+         )}>{score.toFixed(1)}</span>
+      </div>
+    </div>
+  )
+}
+
 /* ─── KPI Card Component ────────────────────────────────── */
 const KpiCard = ({ icon: Icon, iconColor, label, value, subtitle, trend, trendUp }) => (
   <div className="flex-1 bg-white rounded-[20px] border border-slate-200 shadow-sm p-6 flex items-center gap-5 transition-all hover:shadow-md hover:border-slate-300 group">
@@ -535,9 +597,16 @@ export default function Dashboard({ engine }) {
 
                 {/* Tri-Shield Breakdown */}
                 <div>
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                     <ShieldAlert size={14} className="text-sky-500" /> Tri-Shield Scores
                   </h4>
+                  
+                  {/* Gauge Chart for Overall Risk */}
+                  <div className="flex flex-col items-center justify-center mb-8 pb-6 border-b border-slate-100">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Overall Ensemble Risk</span>
+                    <GaugeChart score={(u.ensembleScore || 0) * 10} decision={u.decision} />
+                  </div>
+
                   <div className="space-y-3">
                     {[
                       { label: 'Shield 1: LightGBM', score: u.lgbScore || 0, threshold: 0.6, color: '#2563eb' },
