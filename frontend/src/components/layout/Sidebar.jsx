@@ -1,5 +1,5 @@
 import React from 'react'
-import { ShieldCheck, LayoutDashboard, Search, ShieldAlert, Settings, Zap } from 'lucide-react'
+import { ShieldCheck, LayoutDashboard, Search, ShieldAlert, Settings, Zap, RefreshCw, Beaker } from 'lucide-react'
 import clsx from 'clsx'
 
 export default function Sidebar({ activeTab, setActiveTab }) {
@@ -9,6 +9,8 @@ export default function Sidebar({ activeTab, setActiveTab }) {
     { id: 'insights', label: 'Model Insights', icon: ShieldAlert },
     { id: 'physics', label: 'Physics Sandbox', icon: Zap },
     { id: 'tuning', label: 'Tuning', icon: Settings },
+    { id: 'parameter_lab', label: 'Simulation Lab', icon: Beaker },
+    { id: 'retraining', label: 'Retraining', icon: RefreshCw },
   ]
 
   return (

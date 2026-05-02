@@ -6,6 +6,8 @@ import UnitInvestigation from './pages/UnitInvestigation'
 import TriLayerInsights from './pages/TriLayerInsights'
 import PhysicsInsights from './pages/PhysicsInsights'
 import Tuning from './pages/Tuning'
+import Retraining from './pages/Retraining'
+import ParameterLab from './pages/ParameterLab'
 import clsx from 'clsx'
 
 import { useYieldEngine } from './hooks/useYieldEngine'
@@ -20,7 +22,9 @@ function App() {
     investigation: 'Unit Investigation',
     insights: 'Model Insights',
     physics: 'Physics Sandbox',
-    tuning: 'Tuning'
+    tuning: 'Tuning',
+    parameter_lab: 'Simulation Lab',
+    retraining: 'Closed-Loop Retraining'
   }
 
   const isDashboard = activeTab === 'dashboard'
@@ -49,6 +53,16 @@ function App() {
                 Live Telemetry Analytics: Real-Time Operating Conditions
               </span>
             )}
+            {activeTab === 'retraining' && (
+              <span className="font-sans text-[10px] text-text-muted uppercase tracking-[0.15em] font-black mt-0.5">
+                LABEL WAFERS / UNITS • RE-OPTIMIZE ENSEMBLE • DEPLOY
+              </span>
+            )}
+            {activeTab === 'parameter_lab' && (
+              <span className="font-sans text-[10px] text-text-muted uppercase tracking-[0.15em] font-black mt-0.5">
+                SINGLE UNIT SIMULATION • SHAP EXPLANATIONS • WHAT-IF ANALYSIS
+              </span>
+            )}
           </div>
 
           {/* Alert Badge (Dashboard Only) - Moved from middle gauge */}
@@ -70,8 +84,10 @@ function App() {
           {activeTab === 'dashboard' && <Dashboard engine={engine} onRiskUpdate={setDashboardRisk} />}
           {activeTab === 'investigation' && <div className="h-full"><UnitInvestigation /></div>}
           {activeTab === 'insights' && <div className="p-6"><TriLayerInsights engine={engine} /></div>}
-          {activeTab === 'physics' && <div className="p-6"><PhysicsInsights engine={engine} /></div>}
+          {activeTab === 'physics' && <div className="p-6 h-full"><PhysicsInsights engine={engine} /></div>}
           {activeTab === 'tuning' && <Tuning />}
+          {activeTab === 'parameter_lab' && <div className="p-6"><ParameterLab /></div>}
+          {activeTab === 'retraining' && <div className="p-6 h-full"><Retraining /></div>}
         </main>
       </div>
     </div>
