@@ -1,0 +1,3 @@
+risk_tier,unit_count,defect_count,defect_rate
+Approve,37420,620,0.0166
+Block,2580,2580,1.0

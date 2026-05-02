@@ -1,0 +1,21 @@
+Isolation Forest — Micron Backend Assembly Dataset
+==================================================
+
+LEAKAGE CONTROLS APPLIED:
+  Split:               train(64%) / val(16%) / test(20%)
+  StandardScaler:       fitted on train only
+  MinMaxScaler:         fitted on train anomaly scores only
+  Threshold tuning:     validation set only
+  Final evaluation:     test set only
+
+CLASSIFICATION REPORT:
+              precision    recall  f1-score   support
+
+    Sellable     0.9795    0.9676    0.9735     36800
+       Scrap     0.6731    0.7669    0.7169      3200
+
+    accuracy                         0.9516     40000
+   macro avg     0.8263    0.8672    0.8452     40000
+weighted avg     0.9550    0.9516    0.9530     40000
+
+ROC AUC Score: 0.8586

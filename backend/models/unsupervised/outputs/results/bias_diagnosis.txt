@@ -1,0 +1,12 @@
+=== BIAS DIAGNOSIS ===
+
+Features to WATCH (split freq > 8%):
+Series([], )
+
+Features dominating EARLY splits (mean depth < 5):
+Series([], )
+
+Features model CANNOT live without (top 3 permutation):
+rrs_5    0.001489
+rrs_3    0.001454
+rrs_4    0.001452

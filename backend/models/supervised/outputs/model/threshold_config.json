@@ -1,0 +1,7 @@
+{
+  "optimal_threshold": 98.32329477046609,
+  "flag_threshold": 99.16164738523304,
+  "val_precision": 1.0,
+  "val_recall": 0.80625,
+  "val_f1": 0.8927335639644162
+}

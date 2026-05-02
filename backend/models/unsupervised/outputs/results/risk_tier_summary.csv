@@ -1,0 +1,4 @@
+risk_tier,unit_count,defect_count,defect_rate
+Approve,36354,746,0.0205
+Block,1005,988,0.9831
+Flag,2641,1466,0.5551

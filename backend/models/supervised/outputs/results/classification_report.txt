@@ -1,0 +1,39 @@
+Supervised LightGBM — Micron Backend Assembly Dataset
+==================================================
+
+LEAKAGE CONTROLS APPLIED:
+  Split:               train(64%) / val(16%) / test(20%)
+  StandardScaler:       fitted on train only
+  class_weight:         'balanced' (no SMOTE needed)
+  Threshold tuning:     empirically via PR curve on val set
+                        optimal_threshold = argmax(F1)
+                        NOT manually set
+  Final evaluation:     test set only
+
+MULTICLASS CLASSIFICATION REPORT:
+              precision    recall  f1-score   support
+
+       Bin 1     0.8380    0.8346    0.8363     30019
+       Bin 2     0.2046    0.2368    0.2195      3983
+       Bin 3     0.3392    0.2273    0.2722      2798
+       Bin 4     0.0317    0.0532    0.0398       620
+       Bin 5     0.6176    0.8062    0.6994       609
+       Bin 6     1.0000    1.0000    1.0000       592
+       Bin 7     0.7101    0.4874    0.5780       593
+       Bin 8     1.0000    1.0000    1.0000       786
+
+    accuracy                         0.7206     40000
+   macro avg     0.5927    0.5807    0.5806     40000
+weighted avg     0.7279    0.7206    0.7228     40000
+
+BINARY CLASSIFICATION REPORT:
+                     precision    recall  f1-score   support
+
+Sellable (Bins 1-3)     0.9834    1.0000    0.9916     36800
+   Scrap (Bins 4-8)     1.0000    0.8063    0.8927      3200
+
+           accuracy                         0.9845     40000
+          macro avg     0.9917    0.9031    0.9422     40000
+       weighted avg     0.9848    0.9845    0.9837     40000
+
+ROC AUC Score: 0.9402

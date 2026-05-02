@@ -1,6 +1,7 @@
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
+import joblib
 
 class LightGBMModel:
     def __init__(self):
@@ -15,10 +16,17 @@ class LightGBMModel:
             random_state=42,
             n_jobs=-1
         )
+        # Thresholds start as None
+        # Must be set via set_threshold() after tune_threshold()
+        # NEVER hardcode these values
         self.approve_threshold = None
         self.flag_threshold    = None
 
     def fit(self, X_train, y_train, X_val, y_val):
+        """
+        Train with early stopping on validation multi_logloss.
+        Early stopping prevents overfitting.
+        """
         self.model.fit(
             X_train, y_train,
             eval_set=[(X_val, y_val)],
@@ -39,6 +47,8 @@ class LightGBMModel:
         Sellable Bins: 1 (index 0), 2 (index 1), 3 (index 2).
         Defect Bins: 4 through 8 (indexes 3-7).
         Risk Score = 1.0 - (P(Bin 1) + P(Bin 2) + P(Bin 3))
+        Matches Isolation Forest output format exactly.
+        Used for threshold tuning and ensemble fusion.
         """
         probs = self.predict_proba(X)
         sellable_prob = probs[:, 0] + probs[:, 1] + probs[:, 2]
@@ -46,23 +56,37 @@ class LightGBMModel:
         return defect_prob * 100
 
     def set_threshold(self, optimal_threshold: float):
+        """
+        Sets approve and flag thresholds.
+        optimal_threshold MUST come from tune_threshold()
+        which derives it empirically from PR curve on validation set.
+        """
         self.approve_threshold = optimal_threshold
         self.flag_threshold    = optimal_threshold + ((100 - optimal_threshold) * 0.5)
         print(f"Empirically tuned thresholds set:")
-        print(f"  Approve → below {self.approve_threshold:.2f}")
-        print(f"  Flag    → {self.approve_threshold:.2f} to {self.flag_threshold:.2f}")
-        print(f"  Block   → above {self.flag_threshold:.2f}")
+        print(f"  Source:  PR curve optimisation on validation set")
+        print(f"  Approve -> below {self.approve_threshold:.2f}")
+        print(f"  Flag    -> {self.approve_threshold:.2f} to {self.flag_threshold:.2f}")
+        print(f"  Block   -> above {self.flag_threshold:.2f}")
 
     def predict_with_tier(self, X):
+        """
+        Returns binary predictions and 0-100 risk scores.
+        Raises RuntimeError if set_threshold() not called first.
+        """
         if self.approve_threshold is None:
-            raise RuntimeError("Thresholds not set.")
+            raise RuntimeError(
+                "Thresholds not set. Call set_threshold() "
+                "after tune_threshold() before predict_with_tier()"
+            )
         risk_scores = self.predict_scaled(X)
         predictions = (risk_scores >= self.approve_threshold).astype(int)
         return predictions, risk_scores
 
     def assign_tier(self, score: float) -> str:
+        """Maps 0-100 risk score to APPROVE/FLAG/BLOCK tier."""
         if self.approve_threshold is None:
-            raise RuntimeError("Thresholds not set.")
+            raise RuntimeError("Thresholds not set. Call set_threshold() first.")
         if score < self.approve_threshold:
             return 'Approve'
         elif score < self.flag_threshold:
@@ -70,5 +94,20 @@ class LightGBMModel:
         else:
             return 'Block'
 
+    def get_feature_importance(self, feature_names: list):
+        """Returns feature importances as sorted pandas Series."""
+        return pd.Series(
+            self.model.feature_importances_,
+            index=feature_names
+        ).sort_values(ascending=False)
+
     def predict_classes(self, X):
         return self.model.predict(X)
+
+    def save(self, model_path: str, features_path: str):
+        joblib.dump(self.model, model_path)
+        print(f"Model saved:    {model_path}")
+
+    def load(self, model_path: str):
+        self.model = joblib.load(model_path)
+        print(f"Model loaded:   {model_path}")
