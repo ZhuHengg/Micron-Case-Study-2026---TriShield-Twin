@@ -6,3 +6,10 @@ __pycache__/
 env/
 venv/
 .env
+
+# Node.js
+node_modules/
+
+# ROM Model Artifacts
+backend/rom/artifacts/
+!backend/rom/artifacts/.gitkeep
