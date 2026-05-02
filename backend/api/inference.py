@@ -35,6 +35,18 @@ FEATURE_COLS = [
     'machine_risk_score', 'resin_batch_risk_score'
 ]
 
+# Nominal baseline values for dynamic imputation of missing stages
+NOMINAL_VALUES = {
+    'bond_force': 30.0, 'xy_placement_offset': 5.0, 'bond_line_thickness': 25.0, 'epoxy_viscosity': 5000.0, 'pick_place_speed': 8000.0,
+    'ultrasonic_power': 1.2, 'bond_time': 15.0, 'loop_height': 200.0, 'capillary_stroke_count': 100000.0, 'efo_voltage': 60.0,
+    'transfer_pressure': 8.0, 'clamping_force': 50.0, 'molding_temperature': 180.0, 'vacuum_level': 2.0,
+    'ball_placement_accuracy': 5.0, 'laser_pulse_energy': 12.0, 'reflow_peak_temp': 260.0, 'flux_density': 0.8,
+    'spindle_current': 2.0, 'vibration_amplitude': 0.5, 'blade_wear_index': 0.3, 'cooling_water_flow': 1.5,
+    'rrs_1': 0.0, 'rrs_2': 0.0, 'rrs_3': 0.0, 'rrs_4': 0.0, 'rrs_5': 0.0,
+    'rrs_delta_1': 0.0, 'rrs_delta_2': 0.0, 'rrs_delta_3': 0.0, 'rrs_delta_4': 0.0, 'rrs_delta_5': 0.0,
+    'machine_risk_score': 0.0, 'resin_batch_risk_score': 0.0
+}
+
 
 class EnsembleEngine:
     """
@@ -102,8 +114,8 @@ class EnsembleEngine:
 
     # ─── Feature extraction (numpy-only, no Pandas) ─────────
     def get_features(self, unit_dict: dict) -> np.ndarray:
-        """Build feature array from dict — no DataFrame on hot path."""
-        vals = np.array([[self._safe_float(unit_dict.get(f, 0.0)) for f in FEATURE_COLS]])
+        """Build feature array from dict with Dynamic Nominal Imputation for missing stages."""
+        vals = np.array([[self._safe_float(unit_dict.get(f, NOMINAL_VALUES.get(f, 0.0))) for f in FEATURE_COLS]])
         return vals
 
     def get_features_df(self, unit_dict: dict) -> pd.DataFrame:
