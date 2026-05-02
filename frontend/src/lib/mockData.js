@@ -1,131 +1,85 @@
-import { Cpu, Zap, Thermometer, Microscope, Scissors, CheckCircle } from 'lucide-react';
+import { Cpu, Zap, Thermometer, Microscope, Scissors, CheckCircle } from 'lucide-react'
 
 export const PROCESSES = [
-  { id: 'die-bond', name: 'Die Bond', icon: Cpu,
+  { 
+    id: 'die-bond', name: 'Die Bond', icon: Cpu,
     params: [
-      { id: 'force', name: 'Bond Force', unit: 'N', type: 'Unit', min: 4, max: 6, nominal: 5 },
-      { id: 'viscosity', name: 'Epoxy Viscosity', unit: 'cP', type: 'Process', min: 400, max: 500, nominal: 450 }
+      { id: 'bond_force', name: 'Bond Force', unit: 'N', min: 20, max: 40, nominal: 30, type: 'Process' },
+      { id: 'xy_placement_offset', name: 'XY Offset', unit: 'µm', min: 0, max: 20, nominal: 5, type: 'Unit' },
+      { id: 'bond_line_thickness', name: 'Bond Line Thickness', unit: 'µm', min: 15, max: 35, nominal: 25, type: 'Process' },
+      { id: 'epoxy_viscosity', name: 'Epoxy Viscosity', unit: 'cP', min: 4500, max: 5500, nominal: 5000, type: 'Process' },
+      { id: 'pick_place_speed', name: 'Pick & Place Speed', unit: 'UPH', min: 7000, max: 9000, nominal: 8000, type: 'Process' }
     ]
   },
-  { id: 'wire-bond', name: 'Wire Bond', icon: Zap,
+  { 
+    id: 'wire-bond', name: 'Wire Bond', icon: Zap,
     params: [
-      { id: 'power', name: 'Ultrasonic Power', unit: 'W', type: 'Unit', min: 70, max: 90, nominal: 80 },
-      { id: 'stroke', name: 'Capillary Stroke', unit: 'k', type: 'Drift', min: 30, max: 50, nominal: 40 },
-      { id: 'efo', name: 'EFO Voltage', unit: 'V', type: 'Process', min: 100, max: 120, nominal: 110 }
+      { id: 'ultrasonic_power', name: 'Ultrasonic Power', unit: 'W', min: 0.8, max: 1.6, nominal: 1.2, type: 'Process' },
+      { id: 'bond_time', name: 'Bond Time', unit: 'ms', min: 10, max: 20, nominal: 15, type: 'Process' },
+      { id: 'loop_height', name: 'Loop Height', unit: 'µm', min: 150, max: 250, nominal: 200, type: 'Unit' },
+      { id: 'capillary_stroke_count', name: 'Capillary Stroke', unit: 'k', min: 0, max: 500, nominal: 100, type: 'Drift' },
+      { id: 'efo_voltage', name: 'EFO Voltage', unit: 'V', min: 55, max: 65, nominal: 60, type: 'Process' }
     ]
   },
-  { id: 'mold', name: 'Mold', icon: Thermometer,
+  { 
+    id: 'mold', name: 'Molding', icon: Thermometer,
     params: [
-      { id: 'pressure', name: 'Transfer Pressure', unit: 'MPa', type: 'Unit', min: 6, max: 10, nominal: 8 },
-      { id: 'temp', name: 'Molding Temp', unit: '°C', type: 'Process', min: 165, max: 185, nominal: 175 }
+      { id: 'transfer_pressure', name: 'Transfer Pressure', unit: 'MPa', min: 6, max: 10, nominal: 8, type: 'Process' },
+      { id: 'clamping_force', name: 'Clamping Force', unit: 'kN', min: 45, max: 55, nominal: 50, type: 'Process' },
+      { id: 'molding_temperature', name: 'Molding Temp', unit: '°C', min: 170, max: 190, nominal: 180, type: 'Process' },
+      { id: 'vacuum_level', name: 'Vacuum Level', unit: 'kPa', min: 0, max: 5, nominal: 2, type: 'Process' }
     ]
   },
-  { id: 'ball-attach', name: 'Ball Attach & Laser Mark', icon: Microscope,
+  { 
+    id: 'ball-attach', name: 'Ball Attach', icon: Microscope,
     params: [
-      { id: 'accuracy', name: 'Placement Acc.', unit: 'µm', type: 'Unit', min: 5, max: 15, nominal: 10 },
-      { id: 'peak_temp', name: 'Reflow Peak', unit: '°C', type: 'Process', min: 235, max: 255, nominal: 245 }
+      { id: 'ball_placement_accuracy', name: 'Placement Accuracy', unit: 'µm', min: 0, max: 15, nominal: 5, type: 'Unit' },
+      { id: 'laser_pulse_energy', name: 'Laser Pulse Energy', unit: 'mJ', min: 10, max: 14, nominal: 12, type: 'Process' },
+      { id: 'reflow_peak_temp', name: 'Reflow Peak Temp', unit: '°C', min: 250, max: 270, nominal: 260, type: 'Process' },
+      { id: 'flux_density', name: 'Flux Density', unit: 'mg/cm²', min: 0.6, max: 1.0, nominal: 0.8, type: 'Process' }
     ]
   },
-  { id: 'saw', name: 'Saw Singulation', icon: Scissors,
+  { 
+    id: 'saw', name: 'Saw Singulation', icon: Scissors,
     params: [
-      { id: 'vibration', name: 'Vibration', unit: 'G', type: 'Unit', min: 0.1, max: 0.2, nominal: 0.15 },
-      { id: 'wear', name: 'Blade Wear', unit: '%', type: 'Drift', min: 20, max: 40, nominal: 30 }
-    ]
-  },
-  { id: 'iol', name: 'IOL Prediction', icon: CheckCircle,
-    params: [
-      { id: 'confidence', name: 'AI Confidence', unit: '%', type: 'Process', min: 90, max: 100, nominal: 98 }
+      { id: 'spindle_current', name: 'Spindle Current', unit: 'A', min: 1.5, max: 2.5, nominal: 2.0, type: 'Process' },
+      { id: 'vibration_amplitude', name: 'Vibration Amplitude', unit: 'G', min: 0, max: 1.0, nominal: 0.5, type: 'Process' },
+      { id: 'blade_wear_index', name: 'Blade Wear Index', unit: '', min: 0, max: 1, nominal: 0.3, type: 'Drift' },
+      { id: 'cooling_water_flow', name: 'Cooling Water', unit: 'L/min', min: 1.0, max: 2.0, nominal: 1.5, type: 'Process' }
     ]
   }
-];
+]
 
-const generateMockData = () => {
-  const data = {};
-  
-  PROCESSES.forEach(p => {
-    const prefix = p.id === 'wire-bond' ? 'WB' : p.id === 'die-bond' ? 'DB' : p.id === 'mold' ? 'MD' : p.id === 'ball-attach' ? 'BA' : p.id === 'saw' ? 'SW' : 'IOL';
-    
-    // Explicit requested examples for Wire Bond
-    const specificNames = p.id === 'wire-bond' ? ['Alpha-01', 'Alpha-02', 'Beta-03', 'Gamma-04', 'Gamma-05'] : ['Unit-A1', 'Unit-A2', 'Unit-B1', 'Unit-B2', 'Unit-C1'];
+export const MOCK_FLEETS = {
+  'die-bond': [
+    { id: 'DB_001', risk: 1.2, status: 'OPTIMAL', currentUnit: 'UNIT-A92J1', liveParams: { bond_force: 30.2, xy_placement_offset: 4.8, bond_line_thickness: 25.1, epoxy_viscosity: 5010, pick_place_speed: 8050 }, history: [], historicalChartData: [] },
+    { id: 'DB_002', risk: 8.4, status: 'CRITICAL', currentUnit: 'UNIT-B81K2', liveParams: { bond_force: 18.5, xy_placement_offset: 25.2, bond_line_thickness: 12.0, epoxy_viscosity: 4800, pick_place_speed: 7200 }, history: [], historicalChartData: [] }
+  ],
+  'wire-bond': [
+    { id: 'WB_005', risk: 2.1, status: 'OPTIMAL', currentUnit: 'UNIT-C71L3', liveParams: { ultrasonic_power: 1.21, bond_time: 15.2, loop_height: 202, capillary_stroke_count: 105, efo_voltage: 60.5 }, history: [], historicalChartData: [] },
+    { id: 'WB_009', risk: 5.4, status: 'MARGINAL', currentUnit: 'UNIT-D61M4', liveParams: { ultrasonic_power: 0.85, bond_time: 12.1, loop_height: 140, capillary_stroke_count: 410, efo_voltage: 54.2 }, history: [], historicalChartData: [] }
+  ],
+  'mold': [
+    { id: 'MP_001', risk: 0.8, status: 'OPTIMAL', currentUnit: 'UNIT-E51N5', liveParams: { transfer_pressure: 8.1, clamping_force: 50.5, molding_temperature: 180.5, vacuum_level: 2.1 }, history: [], historicalChartData: [] }
+  ],
+  'ball-attach': [
+    { id: 'BA_003', risk: 1.5, status: 'OPTIMAL', currentUnit: 'UNIT-F41P6', liveParams: { ball_placement_accuracy: 4.2, laser_pulse_energy: 12.1, reflow_peak_temp: 260.1, flux_density: 0.82 }, history: [], historicalChartData: [] }
+  ],
+  'saw': [
+    { id: 'SW_002', risk: 3.2, status: 'OPTIMAL', currentUnit: 'UNIT-G31Q7', liveParams: { spindle_current: 2.05, vibration_amplitude: 0.48, blade_wear_index: 0.32, cooling_water_flow: 1.45 }, history: [], historicalChartData: [] }
+  ]
+}
 
-    data[p.id] = specificNames.map((name, i) => {
-      // Machine Personality: 0=Stable, 1=Drifting, 2=Erratic
-      const personality = i % 3;
-      
-      const isHighRisk = personality === 1; // Drifting machines are high risk
-      const risk = isHighRisk ? (7.5 + Math.random() * 2).toFixed(1) : (1.0 + Math.random() * 2).toFixed(1);
-      
-      const liveParams = {};
-      p.params.forEach(param => {
-         if (isHighRisk && Math.random() > 0.4) {
-            liveParams[param.id] = (param.max + (Math.random() * param.max * 0.15)).toFixed(1);
-         } else {
-            const offset = (Math.random() - 0.5) * (param.max - param.min) * 0.5;
-            liveParams[param.id] = (param.nominal + offset).toFixed(1);
-         }
-      });
-      
-      const currentUnit = `#MC-${Math.floor(80000 + Math.random()*19999)}-${['A','B','C'][i%3]}`;
-
-      // Generate history
-      const history = Array.from({length: 12}).map((_, j) => {
-        let histRisk;
-        if (personality === 0) histRisk = 1.0 + Math.random() * 2; // Stable
-        else if (personality === 1) histRisk = 4.0 + (j * 0.5); // Drifting Up
-        else histRisk = Math.random() * 9; // Erratic
-        
-        histRisk = Math.min(10, histRisk);
-        const isHistHigh = histRisk >= 7;
-        
-        const snapshotStr = p.params.map(param => {
-          const val = isHistHigh ? (param.max * 1.05).toFixed(1) : param.nominal.toFixed(1);
-          return `${param.id.substring(0,3).toUpperCase()}:${val}${param.unit}`;
-        }).join(' | ');
-
-        const now = new Date();
-        now.setMinutes(now.getMinutes() - (j * 20)); // 20 min increments
-
-        return {
-           id: `LOG-${Math.floor(Math.random()*900000)}`,
-           time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-           unit: j === 0 ? currentUnit : `#MC-${Math.floor(80000 + Math.random()*19999)}-${['A','B','C'][(i+j)%3]}`,
-           risk: histRisk,
-           snapshot: snapshotStr,
-           action: isHistHigh ? 'Flagged for Inspection' : 'Passed',
-           isHighRisk: isHistHigh
-        }
-      });
-
-      // Generate 24-hour historical trend graph data
-      const historicalChartData = Array.from({length: 24}).map((_, j) => {
-         const pastTime = new Date();
-         pastTime.setHours(pastTime.getHours() - (23 - j));
-         
-         let histRiskScore;
-         if (personality === 0) histRiskScore = 1.5 + (Math.random() * 1); // Stable
-         else if (personality === 1) histRiskScore = 2.0 + (j * 0.3); // Drifting Up
-         else histRiskScore = Math.sin(j / 2) * 4 + 5; // Sine wave erratic
-         
-         histRiskScore = Math.max(0, Math.min(10, histRiskScore));
-         
-         return {
-           time: pastTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-           riskScore: parseFloat(histRiskScore.toFixed(1))
-         }
-      });
-
-      return {
-        id: `${prefix}-${name}`,
-        risk: parseFloat(risk),
-        status: isHighRisk ? 'CRITICAL DRIFT' : parseFloat(risk) > 4 ? 'MARGINAL WARNING' : 'OPTIMAL',
-        currentUnit,
-        liveParams,
-        history,
-        historicalChartData
-      };
-    });
-  });
-  return data;
-};
-
-export const MOCK_FLEETS = generateMockData();
+// Add dummy history to mock units
+Object.values(MOCK_FLEETS).forEach(fleet => {
+  fleet.forEach(m => {
+    m.history = [
+      { id: 1, time: '14:20:01', unit: 'UNIT-X001', risk: m.risk, snapshot: 'Within nominal bounds', action: 'PASS', isHighRisk: m.risk > 7 },
+      { id: 2, time: '14:21:45', unit: 'UNIT-X002', risk: m.risk + 0.5, snapshot: 'Slight drift detected', action: 'PASS', isHighRisk: m.risk > 7 }
+    ]
+    m.historicalChartData = Array.from({ length: 24 }, (_, i) => ({
+      time: `${i}:00`,
+      riskScore: m.risk + (Math.random() - 0.5) * 2
+    }))
+  })
+})

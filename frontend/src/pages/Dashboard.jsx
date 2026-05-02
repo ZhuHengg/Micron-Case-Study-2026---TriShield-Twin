@@ -160,43 +160,43 @@ const MachineCard = ({ stage, data, cumulativeProb }) => {
 
 const STAGES = [
   { 
-    id: 'die-bond', name: 'Die Bond', icon: Cpu, color: '#2563eb', // Industrial Blue
+    id: 'die-bond', name: 'Die Bond', icon: Cpu, color: '#2563eb',
     params: [
-      { id: 'force', label: 'Bond Force', unit: 'N', min: 0, max: 10, nominal: 5 },
-      { id: 'viscosity', label: 'Epoxy Viscosity', unit: 'cP', min: 300, max: 600, nominal: 450 }
+      { id: 'bond_force', label: 'Bond Force', unit: 'N', min: 20, max: 40, nominal: 30 },
+      { id: 'epoxy_viscosity', label: 'Epoxy Viscosity', unit: 'cP', min: 4500, max: 5500, nominal: 5000 }
     ]
   },
   { 
-    id: 'wire-bond', name: 'Wire Bond', icon: Zap, color: '#7c3aed', // Royal Purple
+    id: 'wire-bond', name: 'Wire Bond', icon: Zap, color: '#7c3aed',
     params: [
-      { id: 'power', label: 'Ultrasonic Power', unit: 'W', min: 50, max: 110, nominal: 80 },
-      { id: 'stroke', label: 'Capillary Stroke', unit: 'k', min: 0, max: 100, nominal: 40 }
+      { id: 'ultrasonic_power', label: 'Ultrasonic Power', unit: 'W', min: 0.8, max: 1.6, nominal: 1.2 },
+      { id: 'capillary_stroke_count', label: 'Capillary Stroke', unit: 'k', min: 0, max: 500, nominal: 100 }
     ]
   },
   { 
-    id: 'mold', name: 'Mold', icon: Thermometer, color: '#d97706', // Deep Amber
+    id: 'mold', name: 'Mold', icon: Thermometer, color: '#d97706',
     params: [
-      { id: 'pressure', label: 'Transfer Pressure', unit: 'MPa', min: 4, max: 12, nominal: 8 },
-      { id: 'temp', label: 'Molding Temp', unit: '°C', min: 150, max: 200, nominal: 175 }
+      { id: 'transfer_pressure', label: 'Transfer Pressure', unit: 'MPa', min: 6, max: 10, nominal: 8 },
+      { id: 'molding_temperature', label: 'Molding Temp', unit: '°C', min: 170, max: 190, nominal: 180 }
     ]
   },
   { 
-    id: 'ball-attach', name: 'Ball Attach & Laser Mark', icon: Microscope, color: '#0891b2', // Ocean Cyan
+    id: 'ball-attach', name: 'Ball Attach', icon: Microscope, color: '#0891b2',
     params: [
-      { id: 'accuracy', label: 'Placement Accuracy', unit: 'µm', min: 0, max: 30, nominal: 10 },
-      { id: 'peak_temp', label: 'Reflow Peak Temp', unit: '°C', min: 220, max: 270, nominal: 245 }
+      { id: 'ball_placement_accuracy', label: 'Placement Accuracy', unit: 'µm', min: 0, max: 15, nominal: 5 },
+      { id: 'reflow_peak_temp', label: 'Reflow Peak Temp', unit: '°C', min: 250, max: 270, nominal: 260 }
     ]
   },
   { 
-    id: 'saw', name: 'Saw Singulation', icon: Scissors, color: '#ec4899', // Industrial Pink
+    id: 'saw', name: 'Saw Singulation', icon: Scissors, color: '#ec4899',
     params: [
-      { id: 'vibration', label: 'Vibration Amplitude', unit: 'G', min: 0, max: 0.5, nominal: 0.15 },
-      { id: 'wear', label: 'Blade Wear Index', unit: '', min: 0, max: 100, nominal: 30 }
+      { id: 'vibration_amplitude', label: 'Vibration Amplitude', unit: 'G', min: 0, max: 1.0, nominal: 0.5 },
+      { id: 'blade_wear_index', label: 'Blade Wear Index', unit: '', min: 0, max: 1, nominal: 0.3 }
     ]
   },
   { 
-    id: 'iol', name: 'IOL / Burn-In Prediction', icon: CheckCircle, color: '#059669', // Tech Emerald
-    params: null // Output only
+    id: 'iol', name: 'Quality Synthesis', icon: CheckCircle, color: '#059669',
+    params: null
   }
 ]
 

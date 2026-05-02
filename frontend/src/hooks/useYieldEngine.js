@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { generateTransaction } from '../utils/defectScoring'
+import { generateUnitData } from '../utils/yieldSimulation'
+import { scoreUnit } from '../utils/defectScoring'
 
 /**
  * useYieldEngine
@@ -188,7 +189,7 @@ export function useYieldEngine() {
         }
       }
 
-      const raw = generateTransaction(template, params.smoteLevel)
+      const raw = generateUnitData(template)
       const interval = isExcursionMode ? 500 : (1000 / Math.max(params.simulationSpeed, 0.1))
       timeoutId = setTimeout(tick, interval)
       if (isExcursionMode) setExcursionQueue(q => q - 1)
@@ -202,92 +203,26 @@ export function useYieldEngine() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           signal: controller.signal,
-          body: JSON.stringify({
-            transaction_id: raw.unit_id || raw.id,
-            amount: raw.amount,
-            sender_id: raw.name_sender,
-            receiver_id: raw.name_recipient,
-            transaction_type: raw.transfer_type.toLowerCase(),
-            timestamp: raw.timestamp,
-            sender_balance_before: raw.sender_balance_before,
-            sender_balance_after: raw.sender_balance_after,
-            receiver_balance_before: raw.receiver_balance_before,
-            receiver_balance_after: raw.receiver_balance_after,
-            amount_vs_avg_ratio: raw.amount_vs_avg_ratio,
-            avg_transaction_amount_30d: raw.avg_transaction_amount_30d,
-            session_duration_seconds: raw.session_duration_seconds,
-            failed_login_attempts: raw.failed_login_attempts,
-            tx_count_24h: raw.tx_count_24h,
-            transaction_hour: raw.transaction_hour,
-            is_weekend: raw.is_weekend,
-            sender_account_fully_drained: raw.sender_account_fully_drained,
-            is_new_recipient: raw.is_new_recipient,
-            established_user_new_recipient: raw.established_user_new_recipient,
-            account_age_days: raw.account_age_days,
-            recipient_risk_profile_score: raw.recipient_risk_profile_score,
-            is_new_device: raw.is_new_device,
-            is_proxy_ip: raw.is_proxy_ip,
-            ip_risk_score: raw.ip_risk_score,
-            country_mismatch: raw.country_mismatch
-          })
+          body: JSON.stringify(raw)
         })
 
         clearTimeout(timeout)
 
         if (res.ok) {
           const scored = await res.json()
-          const activeTuning = window.__activeTuning;
-          const lgbScore = (scored.supervised_score || 0) * 100;
-          const isoScore = (scored.unsupervised_score || 0) * 100;
-          const behScore = (scored.behavioral_score || 0) * 100;
-
-          let tunedScore, tunedDecision;
-          if (activeTuning) {
-            tunedScore = Math.min(100, Math.max(0,
-              lgbScore * activeTuning.weights.lgb +
-              isoScore * activeTuning.weights.iso +
-              behScore * activeTuning.weights.beh
-            ));
-            tunedDecision =
-              tunedScore < activeTuning.thresholds.approve ? 'PASS' :
-              tunedScore < activeTuning.thresholds.flag    ? 'REVIEW' : 'REJECT';
-          } else {
-            tunedScore = scored.risk_score;
-            tunedDecision =
-              scored.risk_level === 'LOW' ? 'PASS' :
-              scored.risk_level === 'MEDIUM' ? 'REVIEW' : 'REJECT';
-          }
-
+          
           const processed = {
             ...raw,
-            supervised_score: scored.supervised_score,
-            unsupervised_score: scored.unsupervised_score,
-            behavioral_score: scored.behavioral_score,
-            rule_breakdown: scored.rule_breakdown ?? null,
-            feature_snapshot: scored.feature_snapshot ?? null,
-            ensembleScore: (tunedScore / 100),
-            riskScore: tunedScore,
-            decision: tunedDecision,
-            riskLevel: tunedDecision === 'REJECT' ? 'HIGH' : tunedDecision === 'REVIEW' ? 'MEDIUM' : 'LOW',
-            ground_truth: raw.isDefective ? 'DEFECTIVE' : 'NOMINAL',
-            isDefective: raw.isDefective,
-            lgbScore: scored.supervised_score,
-            isoScore: scored.unsupervised_score,
-            behScore: scored.behavioral_score,
-            reasons: scored.reasons,
-            riskFactors: scored.reasons,
+            ...scored,
+            riskScore: scored.risk_score,
+            riskLevel: scored.risk_level === 'Block' ? 'HIGH' : scored.risk_level === 'Flag' ? 'MEDIUM' : 'LOW',
+            decision: scored.risk_level === 'Block' ? 'REJECT' : scored.risk_level === 'Flag' ? 'REVIEW' : 'PASS',
+            ensembleScore: scored.risk_score / 100,
+            lgbScore: scored.shield1_score / 100,
+            isoScore: scored.shield2_score / 100,
+            behScore: scored.shield3_score / 100,
+            latencyMs: scored.latency_ms,
             scoredByBackend: true,
-            latencyMs: Date.now() - startTick,
-            isProxyIp: scored.feature_snapshot?.is_proxy_ip ?? raw.is_proxy_ip ?? 0,
-            countryMismatch: scored.feature_snapshot?.country_mismatch ?? raw.country_mismatch ?? 0,
-            isNewDevice: scored.feature_snapshot?.is_new_device ?? raw.is_new_device ?? 0,
-            ipRiskScore: scored.feature_snapshot?.ip_risk_score ?? raw.ip_risk_score ?? 0,
-            senderFullyDrained: scored.feature_snapshot?.sender_fully_drained ?? raw.sender_account_fully_drained ?? 0,
-            isNewRecipient: scored.feature_snapshot?.is_new_recipient ?? raw.is_new_recipient ?? 0,
-            amountVsAvgRatio: scored.feature_snapshot?.amount_vs_avg_ratio ?? raw.amount_vs_avg_ratio ?? 1,
-            txCount24h: scored.feature_snapshot?.tx_count_24h ?? raw.tx_count_24h ?? 0,
-            sessionDurationSeconds: scored.feature_snapshot?.session_duration_seconds ?? raw.session_duration_seconds ?? 0,
-            accountAgeDays: scored.feature_snapshot?.account_age_days ?? raw.account_age_days ?? 0,
           }
           pushToGlobalStore(processed)
           setAllUnits(prev => [processed, ...prev].slice(0, 500))

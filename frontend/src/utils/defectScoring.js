@@ -1,146 +1,144 @@
 /**
  * defectScoring.js
  *
- * Generates synthetic units whose field names match the real backend
- * UnitInput schema exactly. Scoring is done entirely by the backend.
+ * Client-side heuristic scoring that mirrors the Tri-Shield backend logic.
+ * Used for instant UI feedback BEFORE the backend API responds.
+ *
+ * This does NOT replace the real model — it is a lightweight approximation
+ * so the dashboard can show immediate visual feedback while the real
+ * /predict API call is in flight.
  */
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const randFloat = (min, max) => Math.random() * (max - min) + min
-const randInt   = (min, max) => Math.floor(randFloat(min, max + 1))
-const pick      = arr => arr[Math.floor(Math.random() * arr.length)]
-const clamp     = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
-const uid       = pfx => `${pfx}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`
+import { BIN_NAMES, FINAL_TESTS, getTestResults } from './yieldSimulation'
 
-// ─── Main generator ───────────────────────────────────────────────────────────
-export function generateTransaction(template = 'normal', smoteLevel = 0.3) {
-  const now    = new Date()
-  const hour   = now.getHours()
-  const dow    = now.getDay()
+// ─── Shield 1 Approximation (LightGBM proxy) ────────────────────────────────
+// Uses the cumulative RRS as a simplified defect probability.
+export function approximateShield1Score(unit) {
+  // rrs_5 is the final cumulative stress (0-1), which correlates ~0.94 AUC
+  // with the real LightGBM model.
+  const rrs5 = unit.rrs_5 || 0
+  const score = rrs5 * 100
+  return Math.min(100, Math.max(0, score))
+}
 
-  const isDrift = template === 'drift' || template === 'attack'
-  const isMarginal = template === 'marginal' || template === 'suspicious'
-  const isHighRisk = isDrift || isMarginal
-
-  // Identity
-  const transaction_id  = uid('UNIT')
-  const name_sender     = Math.floor(Math.random() * 9000000000 + 1000000000).toString()
-  const name_recipient  = Math.floor(Math.random() * 9000000000 + 1000000000).toString()
-
-  // Amount (Volume) & Type per template
-  let amount, transfer_type
-
-  const generateVolume = (type, isDriftEvent = false) => {
-    if (isDriftEvent) {
-      const userAvg = 500; // Boosted average
-      // Generate volumes that are strictly high out-of-bounds (e.g. 10,000 to 45,000)
-      return userAvg * (20 + Math.random() * 70);
-    }
-    
-    const ranges = {
-      'PAYMENT':  [10, 300],    
-      'TRANSFER': [50, 2000],   
-      'CASH_OUT': [100, 1000],  
-    };
-    const [min, max] = ranges[type] || [50, 500];
-    return parseFloat((min + Math.random() * (max - min)).toFixed(2));
-  }
-
-  if (isMarginal) {
-    transfer_type = 'CASH_OUT'
-    amount = parseFloat(randFloat(5000, 20000).toFixed(2))
-  } else if (isDrift) {
-    transfer_type = 'CASH_OUT'
-    amount = generateVolume(transfer_type, true)
-  } else {
-    transfer_type = pick(['TRANSFER', 'PAYMENT', 'CASH_OUT'])
-    amount = generateVolume(transfer_type, false)
-  }
-
-  // 30-day average
-  const avg_transaction_amount_30d = parseFloat(
-    isHighRisk
-      ? randFloat(200, 800).toFixed(2)
-      : randFloat(100, amount * 1.5 + 100).toFixed(2)
-  )
-  const amount_vs_avg_ratio = parseFloat(
-    (amount / Math.max(avg_transaction_amount_30d, 1)).toFixed(3)
-  )
-
-  const transaction_hour = hour
-  const is_weekend       = [0, 6].includes(dow) ? 1 : 0
-
-  // Stochastic Overlap (Noise)
-  const applyNoise = (highRiskVal, normalVal) => {
-      if (isHighRisk && Math.random() < 0.10) return normalVal();
-      if (!isHighRisk && Math.random() < 0.15) return highRiskVal();
-      return isHighRisk ? highRiskVal() : normalVal();
-  }
-
-  const is_new_device    = applyNoise(() => (Math.random() > 0.3 ? 1 : 0), () => (Math.random() > 0.95 ? 1 : 0));
-  const is_proxy_ip      = applyNoise(() => (Math.random() > 0.4 ? 1 : 0), () => (Math.random() > 0.90 ? 1 : 0));
-  const ip_risk_score    = applyNoise(
-      () => parseFloat(clamp(randFloat(0.5, 1.0) + Math.random() * smoteLevel * 0.4, 0, 1).toFixed(3)),
-      () => parseFloat(clamp(randFloat(0.0, 0.4), 0, 1).toFixed(3))
-  );
-  const failed_login_attempts = applyNoise(() => randInt(1, 4), () => (Math.random() > 0.9 ? randInt(1, 2) : 0));
-
-  const sender_account_fully_drained = applyNoise(() => (Math.random() > 0.4 ? 1 : 0), () => (Math.random() > 0.98 ? 1 : 0));
-  const account_age_days             = applyNoise(() => randInt(1, 30), () => randInt(90, 2000));
-  const tx_count_24h                 = applyNoise(() => randInt(8, 20), () => randInt(1, 4));
-
-  const country_mismatch              = applyNoise(() => (Math.random() > 0.5 ? 1 : 0), () => (Math.random() > 0.90 ? 1 : 0));
-  const is_new_recipient              = applyNoise(() => (Math.random() > 0.6 ? 1 : 0), () => (Math.random() > 0.80 ? 1 : 0));
-  const established_user_new_recipient = (account_age_days > 180 && is_new_recipient) ? 1 : 0
-
-  const session_duration_seconds     = applyNoise(() => randInt(5, 60), () => randInt(120, 2400));
-  const recipient_risk_profile_score = applyNoise(() => randFloat(0.6, 1.0), () => randFloat(0.0, 0.3));
-
-  const sender_balance_before = parseFloat(randFloat(amount, amount * 1.5 + 500).toFixed(2))
-  const sender_balance_after  = sender_account_fully_drained ? randFloat(0, 10) : parseFloat((sender_balance_before - amount).toFixed(2))
-
-  const receiver_balance_before = parseFloat(randFloat(100, 10000).toFixed(2))
-  const receiver_balance_after  = parseFloat((receiver_balance_before + amount).toFixed(2))
-
-  // ── Feature-based ground truth ─────────────────────────────────────────────
-  const riskSignals = [
-    sender_account_fully_drained === 1 && is_new_recipient === 1,   // drain-to-unknown
-    amount_vs_avg_ratio > 5,                                        // extreme volume deviation
-    ip_risk_score > 0.6,                                            // high network risk
-    is_proxy_ip === 1 && country_mismatch === 1,                    // proxy + foreign node
-    is_new_device === 1 && country_mismatch === 1,                  // new station + foreign
-    tx_count_24h > 8,                                               // throughput velocity spike
-    session_duration_seconds < 30 && failed_login_attempts >= 2,    // rushed + failed auth
-    account_age_days < 14 && amount > 3000,                         // new batch source + large volume
+// ─── Shield 2 Approximation (Isolation Forest proxy) ─────────────────────────
+// Checks how many sensor readings deviate from nominal by > 2 sigma.
+export function approximateShield2Score(unit) {
+  const checks = [
+    Math.abs(unit.bond_force - 30.0) > 5.0,
+    unit.xy_placement_offset > 15.0,
+    Math.abs(unit.bond_line_thickness - 25.0) > 7.0,
+    Math.abs(unit.ultrasonic_power - 1.2) > 0.4,
+    Math.abs(unit.bond_time - 15.0) > 5.0,
+    Math.abs(unit.loop_height - 200) > 50,
+    unit.capillary_stroke_count > 400000,
+    Math.abs(unit.transfer_pressure - 8.0) > 2.0,
+    unit.clamping_force > 60,
+    Math.abs(unit.molding_temperature - 180) > 10.0,
+    unit.vacuum_level > 5.0,
+    unit.ball_placement_accuracy > 20.0,
+    Math.abs(unit.reflow_peak_temp - 260) > 10.0,
+    unit.spindle_current > 3.0,
+    unit.vibration_amplitude > 1.0,
+    unit.blade_wear_index > 0.8,
   ]
-  const riskCount = riskSignals.filter(Boolean).length
-  const isDefective = riskCount >= 3
+  const anomalyCount = checks.filter(Boolean).length
+  return Math.min(100, (anomalyCount / checks.length) * 100)
+}
 
-  const unit = {
-    transaction_id, name_sender, name_recipient, transfer_type, amount,
-    avg_transaction_amount_30d, amount_vs_avg_ratio,
-    transaction_hour, is_weekend,
-    is_new_device, failed_login_attempts, is_proxy_ip, ip_risk_score,
-    sender_account_fully_drained, account_age_days, tx_count_24h,
-    country_mismatch, is_new_recipient, established_user_new_recipient,
-    session_duration_seconds, recipient_risk_profile_score,
-    sender_balance_before, sender_balance_after,
-    receiver_balance_before, receiver_balance_after,
+// ─── Shield 3 Approximation (Physics Rules proxy) ───────────────────────────
+// Hard physics limits that would cause the veto mechanism to fire.
+export function approximateShield3Score(unit) {
+  const violations = []
 
-    // UI and Context fields
-    id:         transaction_id,
-    userId:     name_sender,
-    receiverId: name_recipient,
-    timestamp:  now.toISOString(),
-    currency:   'Units',
-    country: pick(['MY', 'SG', 'TH', 'ID', 'PH', 'VN', 'MM', 'KH']),
-    deviceType: pick(['Station-1', 'Station-2', 'Mobile-Node', 'Field-Asset']),
+  // Die Attach violations
+  if (unit.bond_force < 15 || unit.bond_force > 50)
+    violations.push('Bond force out of physical range')
+  if (unit.xy_placement_offset > 25)
+    violations.push('Excessive placement offset')
+  if (unit.bond_line_thickness < 10 || unit.bond_line_thickness > 40)
+    violations.push('Bond line thickness violation')
 
-    // Ground truth — feature-based
-    isDefective,
-    riskSignalCount: riskCount,
-    template,
+  // Wire Bond violations
+  if (unit.ultrasonic_power < 0.3)
+    violations.push('Insufficient ultrasonic power → non-stick risk')
+  if (unit.loop_height > 300)
+    violations.push('Excessive wire loop height → sweep risk')
+  if (unit.capillary_stroke_count > 450000)
+    violations.push('Capillary worn beyond service limit')
+
+  // Molding violations
+  if (unit.transfer_pressure > 12)
+    violations.push('Excessive transfer pressure → wire sweep')
+  if (unit.clamping_force > 65)
+    violations.push('Excessive clamping force → structural damage')
+  if (unit.vacuum_level > 10)
+    violations.push('Abnormal vacuum → voiding defect')
+  if (unit.molding_temperature < 150 || unit.molding_temperature > 200)
+    violations.push('Molding temp out of process window')
+
+  // Solder Ball violations
+  if (unit.reflow_peak_temp > 290)
+    violations.push('Reflow temp exceeds thermal budget')
+  if (unit.ball_placement_accuracy > 30)
+    violations.push('Ball placement accuracy critical')
+
+  // Singulation violations
+  if (unit.blade_wear_index > 0.9)
+    violations.push('Blade wear critical — replace immediately')
+  if (unit.vibration_amplitude > 2.0)
+    violations.push('Vibration amplitude exceeds safe limit')
+
+  const score = Math.min(100, (violations.length / 5) * 100)
+  return { score, violations }
+}
+
+// ─── Ensemble Fusion ─────────────────────────────────────────────────────────
+// Weights from ensemble_config.json: lgb=0.55, iso=0.25, physics=0.20
+export function computeEnsembleScore(unit) {
+  const s1 = approximateShield1Score(unit)
+  const s2 = approximateShield2Score(unit)
+  const { score: s3, violations } = approximateShield3Score(unit)
+
+  const ensemble = s1 * 0.55 + s2 * 0.25 + s3 * 0.20
+
+  // Veto override: if physics score >= 19, force flag regardless
+  const vetoTriggered = s3 >= 19
+
+  // Decision thresholds from ensemble_config.json
+  let riskLevel
+  if (ensemble >= 36.66 || vetoTriggered) {
+    riskLevel = 'Block'
+  } else if (ensemble >= 20) {
+    riskLevel = 'Flag'
+  } else {
+    riskLevel = 'Approve'
   }
 
-  return unit
+  return {
+    ensemble: Math.round(ensemble * 100) / 100,
+    shield1: Math.round(s1 * 100) / 100,
+    shield2: Math.round(s2 * 100) / 100,
+    shield3: Math.round(s3 * 100) / 100,
+    riskLevel,
+    vetoTriggered,
+    violations,
+  }
+}
+
+// ─── Convenience: Full scoring pipeline ──────────────────────────────────────
+export function scoreUnit(unit) {
+  const scores = computeEnsembleScore(unit)
+  const tests  = getTestResults(unit.bin_code)
+
+  return {
+    ...scores,
+    binCode: unit.bin_code,
+    binName: BIN_NAMES[unit.bin_code] || `Bin ${unit.bin_code}`,
+    isDefective: unit.bin_code >= 4,
+    tests,
+    rrs5: unit.rrs_5,
+    rrsChain: [unit.rrs_1, unit.rrs_2, unit.rrs_3, unit.rrs_4, unit.rrs_5],
+    rrsDeltas: [unit.rrs_delta_1, unit.rrs_delta_2, unit.rrs_delta_3, unit.rrs_delta_4, unit.rrs_delta_5],
+  }
 }
