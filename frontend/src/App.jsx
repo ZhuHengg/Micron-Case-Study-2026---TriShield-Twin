@@ -23,7 +23,7 @@ function App() {
     insights: 'Model Insights',
     physics: 'Physics Sandbox',
     tuning: 'Tuning',
-    parameter_lab: 'Simulation Lab',
+    parameter_lab: 'Parameter Tuning Lab',
     retraining: 'Closed-Loop Retraining'
   }
 
@@ -33,7 +33,7 @@ function App() {
     <div className="flex h-screen bg-bg-base overflow-hidden">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       <div className="flex-1 flex flex-col h-full bg-grid-pattern bg-grid">
-        
+
         {/* Global Page Header */}
         <header className={clsx(
           "px-8 py-4 bg-white border-b flex items-center justify-between shrink-0 z-[100] relative transition-all duration-300",
@@ -73,10 +73,10 @@ function App() {
           )}
 
           <div className="flex items-center gap-4 relative z-10">
-             <div className="flex flex-col items-end">
-                <span className="font-sans text-[9px] text-text-muted uppercase tracking-widest font-black">Environment</span>
-                <span className="font-sans text-[11px] text-text-primary font-black uppercase">Production Fab 20</span>
-             </div>
+            <div className="flex flex-col items-end">
+              <span className="font-sans text-[9px] text-text-muted uppercase tracking-widest font-black">Environment</span>
+              <span className="font-sans text-[11px] text-text-primary font-black uppercase">Production Fab 20</span>
+            </div>
           </div>
         </header>
 

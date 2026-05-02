@@ -9,7 +9,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
     { id: 'insights', label: 'Model Insights', icon: ShieldAlert },
     { id: 'physics', label: 'Physics Sandbox', icon: Zap },
     { id: 'tuning', label: 'Tuning', icon: Settings },
-    { id: 'parameter_lab', label: 'Simulation Lab', icon: Beaker },
+    { id: 'parameter_lab', label: 'Parameter Tuning Lab', icon: Beaker },
     { id: 'retraining', label: 'Retraining', icon: RefreshCw },
   ]
 
