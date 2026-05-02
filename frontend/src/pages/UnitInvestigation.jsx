@@ -59,6 +59,7 @@ export default function UnitInvestigation({ engine }) {
   const [sortMode, setSortMode] = useState('Highest Risk')
   const [selectedUnitId, setSelectedUnitId] = useState(null)
   const [activeStageId, setActiveStageId] = useState(1)
+  const [searchTerm, setSearchTerm] = useState('')
 
   // Sort units
   const sortedUnits = useMemo(() => {
@@ -68,6 +69,17 @@ export default function UnitInvestigation({ engine }) {
     if (sortMode === 'Most Recent') sorted.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
     return sorted
   }, [allUnits, sortMode])
+
+  // Filter by search
+  const filteredUnits = useMemo(() => {
+    if (!searchTerm.trim()) return sortedUnits
+    const term = searchTerm.toLowerCase()
+    return sortedUnits.filter(u =>
+      (u.unit_id || u.id || '').toLowerCase().includes(term) ||
+      (u.lotId || '').toLowerCase().includes(term) ||
+      (u.archetype || '').toLowerCase().includes(term)
+    )
+  }, [sortedUnits, searchTerm])
 
   const activeUnit = useMemo(() => {
     if (selectedUnitId) return allUnits.find(u => u.unit_id === selectedUnitId || u.id === selectedUnitId)
@@ -189,9 +201,23 @@ export default function UnitInvestigation({ engine }) {
                 <Filter size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
             </CardHeader>
+
+            {/* Search */}
+            <div className="px-4 pt-3 pb-1 shrink-0">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  placeholder="Search unit ID, lot..."
+                  className="w-full pl-9 pr-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-300 placeholder:text-slate-300 shadow-sm"
+                />
+              </div>
+            </div>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
-              {sortedUnits.map(unit => {
+              {filteredUnits.map(unit => {
                 const isSelected = (activeUnit.unit_id || activeUnit.id) === (unit.unit_id || unit.id)
                 const risk = (unit.ensembleScore || 0) * 10
                 const statusColor = risk >= 7 ? 'bg-red-500' : risk > 4 ? 'bg-amber-500' : 'bg-emerald-500'

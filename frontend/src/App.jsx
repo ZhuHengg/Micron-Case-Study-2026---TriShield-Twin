@@ -9,16 +9,18 @@ import Tuning from './pages/Tuning'
 import Retraining from './pages/Retraining'
 import ParameterLab from './pages/ParameterLab'
 import clsx from 'clsx'
+import { Play, Pause, Zap } from 'lucide-react'
+
 
 import { useYieldEngine } from './hooks/useYieldEngine'
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [dashboardRisk, setDashboardRisk] = useState({ prob: 0, isCompound: false })
+
   const engine = useYieldEngine()
 
   const tabNames = {
-    dashboard: 'Yield Dashboard',
+    dashboard: 'WIP Dashboard: Active Batch Tracking',
     investigation: 'Unit Investigation',
     insights: 'Model Insights',
     physics: 'Physics Sandbox',
@@ -28,6 +30,7 @@ function App() {
   }
 
   const isDashboard = activeTab === 'dashboard'
+
 
   return (
     <div className="flex h-screen bg-bg-base overflow-hidden">
@@ -50,9 +53,10 @@ function App() {
             </h2>
             {isDashboard && (
               <span className="font-sans text-[10px] text-text-muted uppercase tracking-[0.15em] font-black mt-0.5">
-                Live Telemetry Analytics: Real-Time Operating Conditions
+                Live Production Floor • Fab 20 Digital Thread
               </span>
             )}
+
             {activeTab === 'retraining' && (
               <span className="font-sans text-[10px] text-text-muted uppercase tracking-[0.15em] font-black mt-0.5">
                 LABEL WAFERS / UNITS • RE-OPTIMIZE ENSEMBLE • DEPLOY
@@ -65,23 +69,42 @@ function App() {
             )}
           </div>
 
-          {/* Alert Badge (Dashboard Only) - Moved from middle gauge */}
-          {isDashboard && dashboardRisk.isCompound && (
-            <div className="absolute left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-rose-100 border border-rose-200 animate-pulse z-10">
-              <span className="text-[10px] font-black text-rose-600 uppercase tracking-[0.2em]">⚠️ Multi-Stage Process Drift Detected</span>
-            </div>
-          )}
 
-          <div className="flex items-center gap-4 relative z-10">
-            <div className="flex flex-col items-end">
-              <span className="font-sans text-[9px] text-text-muted uppercase tracking-widest font-black">Environment</span>
-              <span className="font-sans text-[11px] text-text-primary font-black uppercase">Production Fab 20</span>
-            </div>
+
+          <div className="flex items-center gap-3 relative z-10">
+            {isDashboard ? (
+              <>
+                {engine.setIsRunning && (
+                  <button
+                    onClick={() => engine.setIsRunning(!engine.isRunning)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-amber-200 text-amber-600 bg-amber-50 hover:bg-amber-100 transition-colors"
+                  >
+                    {engine.isRunning ? <Pause size={12} /> : <Play size={12} />}
+                    {engine.isRunning ? 'Pause' : 'Resume'}
+                  </button>
+                )}
+                {engine.triggerExcursionBurst && (
+                  <button
+                    onClick={engine.triggerExcursionBurst}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                  >
+                    <Zap size={12} />
+                    Excursion Burst
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className="flex flex-col items-end">
+                <span className="font-sans text-[9px] text-text-muted uppercase tracking-widest font-black">Environment</span>
+                <span className="font-sans text-[11px] text-text-primary font-black uppercase">Production Fab 20</span>
+              </div>
+            )}
           </div>
         </header>
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
-          {activeTab === 'dashboard' && <Dashboard engine={engine} onRiskUpdate={setDashboardRisk} />}
+          {activeTab === 'dashboard' && <Dashboard engine={engine} />}
+
           {activeTab === 'investigation' && <div className="h-full"><UnitInvestigation engine={engine} /></div>}
           {activeTab === 'insights' && <div className="p-6"><TriLayerInsights engine={engine} /></div>}
           {activeTab === 'physics' && <div className="p-6 h-full"><PhysicsInsights engine={engine} /></div>}
