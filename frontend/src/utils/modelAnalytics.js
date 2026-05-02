@@ -100,3 +100,29 @@ export const FEATURE_MAP = [
   { key: 'bond_force', label: 'bond_force', rule: 'Process', color: '#2563eb' },
   { key: 'ultrasonic_power', label: 'ultrasonic_power', rule: 'Process', color: '#7c3aed' },
 ]
+
+// Threshold sweep: compute metrics at every threshold from 0 to 100
+export function calcThresholdCurve(units, weights) {
+  const points = []
+  for (let th = 0; th <= 100; th += 2) {
+    let TP = 0, FP = 0, TN = 0, FN = 0
+    units.forEach(u => {
+      const lgb = ((u.lgbScore) || 0) * 100
+      const iso = ((u.isoScore) || 0) * 100
+      const beh = ((u.behScore) || 0) * 100
+      const score = Math.min(100, Math.max(0, lgb * weights.lgb + iso * weights.iso + beh * weights.beh))
+      const predicted = score >= th
+      const actual = !!u.isDefective
+      if (predicted && actual) TP++
+      else if (predicted && !actual) FP++
+      else if (!predicted && !actual) TN++
+      else FN++
+    })
+    const p = TP + FP > 0 ? TP / (TP + FP) : 0
+    const r = TP + FN > 0 ? TP / (TP + FN) : 0
+    const f = p + r > 0 ? 2 * p * r / (p + r) : 0
+    const fp = FP + TN > 0 ? FP / (FP + TN) : 0
+    points.push({ threshold: th, precision: p, recall: r, f1: f, fpRate: fp })
+  }
+  return points
+}

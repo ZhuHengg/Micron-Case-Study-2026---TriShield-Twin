@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react'
 import { Activity, AlertTriangle, ShieldCheck, Play, Pause, Zap, RefreshCw, Search, Target, Scale } from 'lucide-react'
 import clsx from 'clsx'
 import Panel from '../components/shared/Panel'
-import { pearsonCorrelation, calcAgreementMatrix, rescore, calcMetrics, PHYSICS_RULES, FEATURE_MAP } from '../utils/modelAnalytics'
+import { pearsonCorrelation, calcAgreementMatrix, rescore, calcMetrics, calcThresholdCurve, PHYSICS_RULES, FEATURE_MAP } from '../utils/modelAnalytics'
 
 export default function TriLayerInsights({ engine }) {
   const allUnits = engine?.allUnits || []
@@ -74,6 +74,22 @@ export default function TriLayerInsights({ engine }) {
     .filter(t => t.lgbScore != null && t.isoScore != null)
     .map(t => ({ ...t, delta: Math.abs((t.lgbScore || 0) - (t.isoScore || 0)) }))
     .sort((a, b) => b.delta - a.delta).slice(0, 8), [allUnits])
+
+  // Threshold curve for the chart
+  const thresholdCurve = useMemo(() => calcThresholdCurve(allUnits, weights), [allUnits, weights])
+
+  // Reclassification counts
+  const reclassified = useMemo(() => {
+    let toApprove = 0, toBlock = 0
+    allUnits.forEach(u => {
+      const original = u.decision
+      const { dec } = rescore(u, weights, thresholds)
+      if (original === 'REJECT' && dec === 'PASS') toApprove++
+      if (original === 'PASS' && dec === 'REJECT') toBlock++
+    })
+    return { toApprove, toBlock }
+  }, [allUnits, weights, thresholds])
+
 
   const MetricBar = ({ value, label, reverse }) => {
     let color = reverse ? (value <= 0.1 ? 'bg-emerald-400' : value <= 0.3 ? 'bg-amber-400' : 'bg-red-400') : (value >= 0.8 ? 'bg-emerald-400' : value >= 0.5 ? 'bg-amber-400' : 'bg-red-400')
@@ -286,48 +302,155 @@ export default function TriLayerInsights({ engine }) {
               </div>
             </Panel>
           </div>
-
-          {/* 4: Top Disagreements */}
-          <Panel title="Shield Disagreement Cases — where LightGBM and IsoForest conflict most">
-            <div className="overflow-x-auto min-h-[200px]">
-              <table className="w-full text-left border-collapse">
-                <thead className="border-b border-slate-200">
-                  <tr>
-                    <th className="py-2 pl-4 text-[10px] uppercase tracking-widest text-slate-400 font-bold w-28">Unit ID</th>
-                    <th className="py-2 text-[10px] uppercase tracking-widest font-bold text-right w-16" style={{ color: '#2563eb' }}>S1 (LGB)</th>
-                    <th className="py-2 text-[10px] uppercase tracking-widest font-bold text-right w-16" style={{ color: '#7c3aed' }}>S2 (ISO)</th>
-                    <th className="py-2 text-[10px] uppercase tracking-widest font-bold text-right w-16" style={{ color: '#d97706' }}>S3 (PHY)</th>
-                    <th className="py-2 text-[10px] uppercase tracking-widest font-bold text-right pr-4 w-20">Decision</th>
-                    <th className="py-2 text-[10px] uppercase tracking-widest font-black text-center w-20">Delta</th>
-                    <th className="py-2 text-[10px] uppercase tracking-widest text-slate-400 font-bold">Reason</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {topDisagreements.map(t => {
-                    const isHigh = t.delta > 0.5
-                    return (
-                      <tr key={t.unit_id || t.id} className={clsx("hover:bg-slate-50 transition-colors", isHigh && "border-l-2 border-l-red-400")}>
-                        <td className="py-3 pl-4 text-[11px] text-slate-700 font-bold"><span className="bg-slate-100 px-1.5 rounded font-sans">{(t.unit_id || t.id || '').slice(0, 12)}</span></td>
-                        <td className="py-3 text-[11px] text-right font-bold" style={{ color: '#2563eb' }}>{((t.lgbScore || 0) * 100).toFixed(1)}%</td>
-                        <td className="py-3 text-[11px] text-right font-bold" style={{ color: '#7c3aed' }}>{((t.isoScore || 0) * 100).toFixed(1)}%</td>
-                        <td className="py-3 text-[11px] text-right font-bold" style={{ color: '#d97706' }}>{((t.behScore || 0) * 100).toFixed(1)}%</td>
-                        <td className="py-3 text-[10px] text-right pr-4">
-                          <span className={clsx("px-2 py-0.5 rounded font-black uppercase",
-                            t.decision === 'REJECT' ? 'text-red-600 bg-red-50' : t.decision === 'REVIEW' ? 'text-amber-600 bg-amber-50' : 'text-emerald-600 bg-emerald-50'
-                          )}>{t.decision}</span>
-                        </td>
-                        <td className={clsx("py-3 text-[11px] text-center font-black", isHigh ? 'text-red-500' : t.delta > 0.3 ? 'text-amber-500' : 'text-emerald-500')}>±{(t.delta * 100).toFixed(1)}%</td>
-                        <td className="py-3 text-[9px] text-slate-400 pr-2 truncate max-w-[200px] font-bold">{t.reasons?.[0]?.slice(0, 50) || 'No explicit reason'}</td>
-                      </tr>
-                    )
-                  })}
-                  {topDisagreements.length === 0 && <tr><td colSpan={7} className="text-center py-8 text-xs text-slate-400 font-bold">Waiting for units to be scored...</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </Panel>
         </div>
       </div>
+
+      {/* CLASSIFICATION METRICS */}
+      <div className="grid grid-cols-4 gap-3">
+        {[
+          { label: 'Precision', value: sim.p, desc: `${sim.TP} TP / ${sim.TP + sim.FP} Blocked`, color: '#10b981' },
+          { label: 'Recall', value: sim.r, desc: `${sim.TP} caught / ${sim.TP + sim.FN} total defects`, color: '#f59e0b' },
+          { label: 'F1 Score', value: sim.f, desc: 'Harmonic mean of P & R', color: '#2563eb' },
+          { label: 'FP Rate', value: sim.fp, desc: `${sim.FP} false positives`, color: '#ef4444', reverse: true },
+        ].map((m, i) => {
+          const pct = (m.value * 100)
+          const status = m.reverse 
+            ? (pct <= 5 ? 'excellent' : pct <= 15 ? 'acceptable' : 'critical')
+            : (pct >= 80 ? 'excellent' : pct >= 50 ? 'acceptable' : 'critical')
+          const statusColor = status === 'excellent' ? '#10b981' : status === 'acceptable' ? '#f59e0b' : '#ef4444'
+          return (
+            <div key={i} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 relative overflow-hidden">
+              <div className="flex justify-between items-start mb-3">
+                <span className="text-[10px] text-slate-400 uppercase tracking-widest font-black">{m.label}</span>
+              </div>
+              <div className="text-4xl font-black font-sans mb-1" style={{ color: m.color }}>
+                {m.label === 'F1 Score' ? m.value.toFixed(3) : `${pct.toFixed(1)}%`}
+              </div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ color: statusColor, backgroundColor: statusColor + '15' }}>
+                  {status}
+                </span>
+              </div>
+              <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-2">
+                <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: m.color }} />
+              </div>
+              <p className="text-[9px] text-slate-400 font-bold">{m.desc}</p>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Reclassification banner */}
+      <div className="text-center">
+        <span className="text-xs uppercase tracking-widest font-black text-slate-500">
+          {reclassified.toApprove + reclassified.toBlock} reclassified · 
+          <span className="text-emerald-500"> {reclassified.toApprove} → Approve</span> · 
+          <span className="text-red-500"> {reclassified.toBlock} → Block</span>
+        </span>
+      </div>
+
+      {/* THRESHOLD VS METRICS CHART */}
+      <Panel title="Threshold vs Metrics — How each metric changes across thresholds 0–100">
+        <div className="w-full h-[340px] relative">
+          <svg viewBox="0 0 800 300" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+            {/* Grid lines */}
+            {[0, 0.2, 0.4, 0.6, 0.8, 1.0].map(v => (
+              <g key={v}>
+                <line x1="60" y1={260 - v * 240} x2="780" y2={260 - v * 240} stroke="#e2e8f0" strokeWidth="1" />
+                <text x="50" y={264 - v * 240} textAnchor="end" className="text-[10px]" fill="#94a3b8" fontSize="10">{v.toFixed(1)}</text>
+              </g>
+            ))}
+            {/* X-axis labels */}
+            {[0, 12, 24, 36, 48, 60, 72, 84, 96].map(v => (
+              <text key={v} x={60 + (v / 100) * 720} y="280" textAnchor="middle" fill="#94a3b8" fontSize="10">{v}</text>
+            ))}
+            <text x="420" y="298" textAnchor="middle" fill="#64748b" fontSize="11" fontWeight="bold">THRESHOLD</text>
+
+            {/* Metric lines */}
+            {[
+              { key: 'precision', color: '#10b981', label: 'Precision' },
+              { key: 'recall', color: '#f59e0b', label: 'Recall' },
+              { key: 'f1', color: '#2563eb', label: 'F1' },
+              { key: 'fpRate', color: '#ef4444', label: 'FP Rate' },
+            ].map(metric => {
+              const pathData = thresholdCurve.map((pt, i) => {
+                const x = 60 + (pt.threshold / 100) * 720
+                const y = 260 - pt[metric.key] * 240
+                return `${i === 0 ? 'M' : 'L'} ${x} ${y}`
+              }).join(' ')
+              return <path key={metric.key} d={pathData} fill="none" stroke={metric.color} strokeWidth="2.5" strokeLinejoin="round" />
+            })}
+
+            {/* Threshold markers */}
+            <line x1={60 + (thresholds.approve / 100) * 720} y1="20" x2={60 + (thresholds.approve / 100) * 720} y2="260" stroke="#f59e0b" strokeWidth="2" strokeDasharray="6 3" />
+            <rect x={60 + (thresholds.approve / 100) * 720 - 32} y="252" width="64" height="18" rx="4" fill="#f59e0b" />
+            <text x={60 + (thresholds.approve / 100) * 720} y="264" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">Approve T={thresholds.approve}</text>
+
+            <line x1={60 + (thresholds.block / 100) * 720} y1="20" x2={60 + (thresholds.block / 100) * 720} y2="260" stroke="#ef4444" strokeWidth="2" strokeDasharray="6 3" />
+            <rect x={60 + (thresholds.block / 100) * 720 - 28} y="252" width="56" height="18" rx="4" fill="#ef4444" />
+            <text x={60 + (thresholds.block / 100) * 720} y="264" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">Block T={thresholds.block}</text>
+
+            {/* Legend */}
+            {[
+              { label: 'Precision', color: '#10b981', x: 540 },
+              { label: 'Recall', color: '#f59e0b', x: 610 },
+              { label: 'F1', color: '#2563eb', x: 670 },
+              { label: 'FP Rate', color: '#ef4444', x: 710 },
+            ].map(l => (
+              <g key={l.label}>
+                <circle cx={l.x} cy="12" r="4" fill={l.color} />
+                <text x={l.x + 8} y="16" fill="#64748b" fontSize="10" fontWeight="bold">{l.label}</text>
+              </g>
+            ))}
+          </svg>
+        </div>
+      </Panel>
+
+      {/* DISAGREEMENT CASES TABLE */}
+      <Panel title="Shield Disagreement Cases — where LightGBM and IsoForest conflict most">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="border-b border-slate-200">
+              <tr>
+                <th className="py-3 pl-4 text-[10px] uppercase tracking-widest text-slate-400 font-bold w-36">Unit ID</th>
+                <th className="py-3 text-[10px] uppercase tracking-widest font-black text-right w-24" style={{ color: '#2563eb' }}>S1 (LGB)</th>
+                <th className="py-3 text-[10px] uppercase tracking-widest font-black text-right w-24" style={{ color: '#7c3aed' }}>S2 (ISO)</th>
+                <th className="py-3 text-[10px] uppercase tracking-widest font-black text-right w-24" style={{ color: '#d97706' }}>S3 (PHY)</th>
+                <th className="py-3 text-[10px] uppercase tracking-widest font-black text-right pr-6 w-28">Decision</th>
+                <th className="py-3 text-[10px] uppercase tracking-widest font-black text-center w-28">Delta</th>
+                <th className="py-3 text-[10px] uppercase tracking-widest text-slate-400 font-bold pl-4">Reason for Conflict</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {topDisagreements.map(t => {
+                const isHigh = t.delta > 0.5
+                return (
+                  <tr key={t.unit_id || t.id} className={clsx("hover:bg-slate-50/80 transition-colors", isHigh && "bg-red-50/20")}>
+                    <td className="py-3.5 pl-4 text-[11px] text-slate-700 font-bold">
+                      <span className="bg-slate-100 px-2 py-0.5 rounded font-mono border border-slate-200">{(t.unit_id || t.id || '').slice(0, 12)}</span>
+                    </td>
+                    <td className="py-3.5 text-xs text-right font-black" style={{ color: '#2563eb' }}>{((t.lgbScore || 0) * 100).toFixed(1)}%</td>
+                    <td className="py-3.5 text-xs text-right font-black" style={{ color: '#7c3aed' }}>{((t.isoScore || 0) * 100).toFixed(1)}%</td>
+                    <td className="py-3.5 text-xs text-right font-black" style={{ color: '#d97706' }}>{((t.behScore || 0) * 100).toFixed(1)}%</td>
+                    <td className="py-3.5 text-[10px] text-right pr-6">
+                      <span className={clsx("px-2.5 py-1 rounded-md font-black uppercase tracking-wider",
+                        t.decision === 'REJECT' ? 'text-red-600 bg-red-50 border border-red-100' : t.decision === 'REVIEW' ? 'text-amber-600 bg-amber-50 border border-amber-100' : 'text-emerald-600 bg-emerald-50 border border-emerald-100'
+                      )}>{t.decision}</span>
+                    </td>
+                    <td className={clsx("py-3.5 text-xs text-center font-black", isHigh ? 'text-red-500' : t.delta > 0.3 ? 'text-amber-500' : 'text-emerald-500')}>
+                      ±{(t.delta * 100).toFixed(1)}%
+                    </td>
+                    <td className="py-3.5 text-[10px] text-slate-500 pl-4 font-bold tracking-tight">
+                      {t.reasons?.join(' | ') || 'No explicit physics signal'}
+                    </td>
+                  </tr>
+                )
+              })}
+              {topDisagreements.length === 0 && <tr><td colSpan={7} className="text-center py-12 text-xs text-slate-400 font-bold uppercase tracking-widest">Waiting for conflicting signals from Tri-Shield...</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
     </div>
   )
 }
