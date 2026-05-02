@@ -8,8 +8,8 @@ from model import LightGBMModel
 from evaluation import tune_threshold, evaluate_predictions
 
 BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
-# Data path goes up 3 levels from backend/models/supervised
-DATA_PATH   = os.path.join(BASE_DIR, '..', '..', '..', 'data', 'synthetic_backend_assembly.csv')
+# Data path goes up 2 levels from backend/models/supervised to backend/
+DATA_PATH   = os.path.join(BASE_DIR, '..', '..', 'data', 'synthetic_backend_assembly.csv')
 
 OUT_MODEL   = os.path.join(BASE_DIR, 'outputs', 'model')
 OUT_PLOTS   = os.path.join(BASE_DIR, 'outputs', 'plots')
