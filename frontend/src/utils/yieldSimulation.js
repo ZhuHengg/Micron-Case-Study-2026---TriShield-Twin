@@ -106,8 +106,10 @@ const DEFECT_OVERRIDES = {
     label: 'Wire Sweep (Functional Fail)',
     overrides: {
       stage3: {
-        transfer_pressure: { mean: 15.0, std: 0.5 },
-        clamping_force:    { mean: 75,   std: 2.0 },
+        transfer_pressure:   { mean: 15.0, std: 0.5 },
+        clamping_force:      { mean: 75,   std: 2.0 },
+        molding_temperature: { mean: 200,  std: 3.0 },
+        vacuum_level:        { mean: 12.0, std: 1.0 },
       }
     }
   },
@@ -120,6 +122,8 @@ const DEFECT_OVERRIDES = {
       stage3: {
         molding_temperature: { mean: 130, std: 3.0 },
         vacuum_level:        { mean: 25.0, std: 2.0 },
+        transfer_pressure:   { mean: 14.0, std: 0.5 },
+        clamping_force:      { mean: 30,   std: 2.0 },
       }
     }
   },
@@ -131,6 +135,8 @@ const DEFECT_OVERRIDES = {
       stage4: {
         reflow_peak_temp:        { mean: 310, std: 3.0 },
         ball_placement_accuracy: { mean: 40.0, std: 3.0 },
+        flux_density:            { mean: 1.8,  std: 0.1 },
+        laser_pulse_energy:      { mean: 18.0, std: 1.0 },
       }
     }
   },
@@ -213,7 +219,8 @@ function computeRrsStage5(unit) {
 }
 
 function computeCumulativeRrs(prevRrs, stageRrs) {
-  return clamp(prevRrs + stageRrs * (1 - prevRrs) * 0.5, 0, 1)
+  // More aggressive accumulation: severe stage defects can push RRS past termination threshold
+  return clamp(prevRrs + stageRrs * (1 - prevRrs) * 0.85, 0, 1)
 }
 
 // ─── Bin Names (for UI display) ──────────────────────────────────────────────
@@ -417,6 +424,8 @@ export function generateUnitData(template = 'normal') {
 
   // ── UI Context Fields ───────────────────────────────────────────────────
   unit.id         = unitId
+  unit.unit_id    = unitId
+  unit.timestamp  = new Date().toISOString()
   unit.binName    = BIN_NAMES[unit.bin_code] || `Bin ${unit.bin_code}`
   unit.template   = template
   unit.archetype  = archetype?.label || (template === 'normal' ? 'Nominal' : 'Marginal')

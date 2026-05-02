@@ -82,7 +82,7 @@ function App() {
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
           {activeTab === 'dashboard' && <Dashboard engine={engine} onRiskUpdate={setDashboardRisk} />}
-          {activeTab === 'investigation' && <div className="h-full"><UnitInvestigation /></div>}
+          {activeTab === 'investigation' && <div className="h-full"><UnitInvestigation engine={engine} /></div>}
           {activeTab === 'insights' && <div className="p-6"><TriLayerInsights engine={engine} /></div>}
           {activeTab === 'physics' && <div className="p-6 h-full"><PhysicsInsights engine={engine} /></div>}
           {activeTab === 'tuning' && <Tuning />}

@@ -71,7 +71,11 @@ class EnsembleEngine:
 
         # Load Physics Rules Engine
         import sys
-        sys.path.insert(0, os.path.join(os.path.dirname(ensemble_dir), '..', 'ensemble'))
+        # ensemble_dir = 'models/ensemble/outputs/model'
+        # We need 'models/ensemble/' where physics_rules.py lives
+        physics_dir = os.path.abspath(os.path.join(ensemble_dir, '..', '..'))
+        if physics_dir not in sys.path:
+            sys.path.insert(0, physics_dir)
         from physics_rules import PhysicsRuleEngine
         self.physics = PhysicsRuleEngine()
 
