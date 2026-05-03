@@ -10,9 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 
 const STAGES = [
-  { id: 1, name: 'Die Attach', icon: Box, params: ['bond_force', 'xy_placement_offset', 'bond_line_thickness', 'epoxy_viscosity'] },
-  { id: 2, name: 'Wire Bonding', icon: Activity, params: ['pick_place_speed', 'ultrasonic_power', 'bond_time', 'loop_height', 'capillary_stroke_count', 'efo_voltage'] },
-  { id: 3, name: 'Molding', icon: Droplet, params: ['transfer_pressure', 'clamping_force', 'molding_temperature', 'vacuum_level'] },
+  { id: 1, name: 'Die Attach', icon: Box, params: ['bond_force', 'xy_placement_offset', 'bond_line_thickness', 'epoxy_viscosity', 'pick_place_speed'] },
+  { id: 2, name: 'Wire Bonding', icon: Activity, params: ['ultrasonic_power', 'bond_time', 'loop_height', 'capillary_stroke_count', 'efo_voltage'] },
+  { id: 3, name: 'Molding', icon: Droplet, params: ['transfer_pressure', 'clamping_force', 'molding_temperature', 'vacuum_level', 'resin_batch_risk_score'] },
   { id: 4, name: 'Ball Attach', icon: Cpu, params: ['ball_placement_accuracy', 'laser_pulse_energy', 'reflow_peak_temp', 'flux_density'] },
   { id: 5, name: 'Singulation', icon: Scissors, params: ['spindle_current', 'vibration_amplitude', 'blade_wear_index', 'cooling_water_flow'] },
 ]

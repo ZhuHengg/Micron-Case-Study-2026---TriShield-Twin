@@ -14,9 +14,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
 const STAGES = [
-  { id: 1, name: 'Die Attach', icon: Box, params: ['bond_force', 'xy_placement_offset', 'bond_line_thickness', 'epoxy_viscosity'] },
-  { id: 2, name: 'Wire Bonding', icon: Activity, params: ['pick_place_speed', 'ultrasonic_power', 'bond_time', 'loop_height', 'capillary_stroke_count', 'efo_voltage'] },
-  { id: 3, name: 'Molding', icon: Droplet, params: ['transfer_pressure', 'clamping_force', 'molding_temperature', 'vacuum_level'] },
+  { id: 1, name: 'Die Attach', icon: Box, params: ['bond_force', 'xy_placement_offset', 'bond_line_thickness', 'epoxy_viscosity', 'pick_place_speed'] },
+  { id: 2, name: 'Wire Bonding', icon: Activity, params: ['ultrasonic_power', 'bond_time', 'loop_height', 'capillary_stroke_count', 'efo_voltage'] },
+  { id: 3, name: 'Molding', icon: Droplet, params: ['transfer_pressure', 'clamping_force', 'molding_temperature', 'vacuum_level', 'resin_batch_risk_score'] },
   { id: 4, name: 'Ball Attach', icon: Cpu, params: ['ball_placement_accuracy', 'laser_pulse_energy', 'reflow_peak_temp', 'flux_density'] },
   { id: 5, name: 'Singulation', icon: Scissors, params: ['spindle_current', 'vibration_amplitude', 'blade_wear_index', 'cooling_water_flow'] },
 ]
@@ -41,6 +41,7 @@ const SENSOR_NOMINALS = {
   reflow_peak_temp: { nominal: 260, unit: '°C' }, flux_density: { nominal: 0.8, unit: 'mg/cm²' },
   spindle_current: { nominal: 2.0, unit: 'A' }, vibration_amplitude: { nominal: 0.5, unit: 'mm' },
   blade_wear_index: { nominal: 0.3, unit: '' }, cooling_water_flow: { nominal: 1.5, unit: 'L/min' },
+  resin_batch_risk_score: { nominal: 0.1, unit: 'RISK' },
 }
 
 const BIN_INFO = {
@@ -500,52 +501,75 @@ export default function UnitInvestigation({ engine }) {
         {/* ═════════ ZONE 3: DEEP DIVE & RCA PANEL (Right 70%) ═════════ */}
         <div className="flex-1 flex flex-col gap-6 min-h-0 overflow-y-auto custom-scrollbar pb-6">
 
-          {/* ═════════ NEW: STAGE PROCESS PIPELINE (Integrated) ═════════ */}
-          <div className="flex items-center gap-4 overflow-x-auto custom-scrollbar shrink-0 px-6 py-4 rounded-[20px] bg-[#1E293B]/40 backdrop-blur-md ring-1 ring-white/10 shadow-xl relative">
-            <div className="absolute top-1/2 left-12 right-12 h-[1px] bg-white/5 -translate-y-1/2 -z-10" />
+          {/* ═════════ NEW: STAGE PROCESS PIPELINE (Stepper Style) ═════════ */}
+          <div className="flex flex-col gap-2 shrink-0 px-6 py-4 rounded-[20px] bg-[#1E293B]/40 backdrop-blur-md ring-1 ring-white/10 shadow-xl relative">
+            <div className="flex items-center justify-between w-full overflow-x-auto custom-scrollbar pb-2">
+              {STAGES.filter(s => s.id <= terminationStage).map((stage, index, arr) => {
+                const rrs = (activeUnit[`rrs_${stage.id}`] || 0) * 10
+                const isTerminal = stage.id === terminationStage && (activeUnit.decision === 'REJECT' || activeUnit.decision === 'REVIEW')
+                const isSelected = activeStageId === stage.id
 
-            {STAGES.filter(s => s.id <= terminationStage).map((stage) => {
-              const rrs = (activeUnit[`rrs_${stage.id}`] || 0) * 10
-              const isTerminal = stage.id === terminationStage && (activeUnit.decision === 'REJECT' || activeUnit.decision === 'REVIEW')
-              const isSelected = activeStageId === stage.id
+                let statusColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                let iconColor = "text-emerald-400"
+                if (isTerminal || rrs >= 8.5) {
+                  statusColor = "bg-red-500/20 text-red-400 border-red-500/40"
+                  iconColor = "text-red-400"
+                } else if (rrs > 5.0) {
+                  statusColor = "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                  iconColor = "text-amber-400"
+                }
 
-              let statusColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-              let iconColor = "text-emerald-400"
-              if (isTerminal || rrs >= 8.5) {
-                statusColor = "bg-red-500/20 text-red-400 border-red-500/40"
-                iconColor = "text-red-400"
-              } else if (rrs > 5.0) {
-                statusColor = "bg-amber-500/10 text-amber-400 border-amber-500/30"
-                iconColor = "text-amber-400"
-              }
+                return (
+                  <React.Fragment key={stage.id}>
+                    <button
+                      onClick={() => setActiveStageId(stage.id)}
+                      className={clsx(
+                        "flex-none flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all relative border",
+                        isSelected ? "bg-white/10 border-white/20 shadow-lg" : "bg-transparent border-transparent hover:bg-white/5"
+                      )}
+                    >
+                      <div className={clsx(
+                        "w-8 h-8 rounded-lg flex items-center justify-center border transition-all",
+                        statusColor,
+                        isSelected ? "scale-110 shadow-inner" : "scale-100"
+                      )}
+                        style={isSelected ? { borderColor: STAGE_COLORS[stage.id] } : {}}
+                      >
+                        <stage.icon size={16} className={iconColor} style={isSelected && !isTerminal ? { color: STAGE_COLORS[stage.id] } : {}} />
+                      </div>
+                      <div className="text-left">
+                        <h4 className="text-[9px] font-black uppercase tracking-widest text-white leading-none mb-1">{stage.name}</h4>
+                        <span className={clsx("text-[10px] font-black font-mono", rrs >= 8.5 ? "text-red-400" : "text-slate-400")}>
+                          {rrs.toFixed(1)}
+                        </span>
+                      </div>
+                    </button>
+                    {/* Stepper Separator */}
+                    {index < arr.length - 1 && (
+                      <div className="flex-1 h-[1px] bg-white/10 mx-2 min-w-[20px]" />
+                    )}
+                  </React.Fragment>
+                )
+              })}
+            </div>
 
-              return (
-                <button
-                  key={stage.id}
-                  onClick={() => setActiveStageId(stage.id)}
-                  className={clsx(
-                    "flex-none flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all relative border",
-                    isSelected ? "bg-white/10 border-white/20 shadow-lg" : "bg-transparent border-transparent hover:bg-white/5"
-                  )}
-                >
-                  <div className={clsx(
-                    "w-8 h-8 rounded-lg flex items-center justify-center border transition-all",
-                    statusColor,
-                    isSelected ? "scale-110 shadow-inner" : "scale-100"
-                  )}
-                    style={isSelected ? { borderColor: STAGE_COLORS[stage.id] } : {}}
-                  >
-                    <stage.icon size={16} className={iconColor} style={isSelected && !isTerminal ? { color: STAGE_COLORS[stage.id] } : {}} />
-                  </div>
-                  <div className="text-left">
-                    <h4 className="text-[9px] font-black uppercase tracking-widest text-white leading-none mb-1">{stage.name}</h4>
-                    <span className={clsx("text-[10px] font-black font-mono", rrs >= 8.5 ? "text-red-400" : "text-slate-400")}>
-                      {rrs.toFixed(1)}
-                    </span>
-                  </div>
-                </button>
-              )
-            })}
+            {/* Stepper Navigation Controls */}
+            <div className="flex justify-between items-center px-4 pt-3 border-t border-white/5">
+              <button
+                onClick={() => setActiveStageId(Math.max(1, activeStageId - 1))}
+                disabled={activeStageId === 1}
+                className="px-4 py-1.5 rounded-md text-[10px] uppercase tracking-widest font-black text-slate-300 bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all border border-white/10"
+              >
+                Back
+              </button>
+              <button
+                onClick={() => setActiveStageId(Math.min(terminationStage, activeStageId + 1))}
+                disabled={activeStageId === terminationStage}
+                className="px-4 py-1.5 rounded-md text-[10px] uppercase tracking-widest font-black text-slate-900 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all border border-emerald-400/50"
+              >
+                Next Stage
+              </button>
+            </div>
           </div>
 
           {/* ROW A: Bin Classification + Archetype + Decision Summary (Redesigned Compact) */}
@@ -628,7 +652,7 @@ export default function UnitInvestigation({ engine }) {
                 </div>
               ) : (
                 <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
-                  {STAGES.find(s => s.id === activeStageId).params.slice(0, 4).map(paramKey => {
+                  {STAGES.find(s => s.id === activeStageId).params.map(paramKey => {
                     const val = activeUnit[paramKey]
                     if (val === undefined) return null
                     const ref = SENSOR_NOMINALS[paramKey] || { nominal: 0, unit: '' }

@@ -1,6 +1,32 @@
 import pandas as pd
 import numpy as np
 
+# Physical control limits for real-time inference (Mean, Std)
+NOMINAL_STATS = {
+    'bond_force': {'mean': 30.0, 'std': 1.0},
+    'xy_placement_offset': {'mean': 5.0,  'std': 2.0},
+    'bond_line_thickness': {'mean': 25.0, 'std': 1.5},
+    'epoxy_viscosity': {'mean': 5000, 'std': 200},
+    'pick_place_speed': {'mean': 8000, 'std': 300},
+    'ultrasonic_power': {'mean': 1.2,  'std': 0.1},
+    'bond_time': {'mean': 15.0, 'std': 1.0},
+    'loop_height': {'mean': 200,  'std': 10},
+    'capillary_stroke_count': {'mean': 100000, 'std': 50000},
+    'efo_voltage': {'mean': 60,   'std': 2},
+    'transfer_pressure': {'mean': 8.0,  'std': 0.4},
+    'clamping_force': {'mean': 50,   'std': 2.0},
+    'molding_temperature': {'mean': 180,  'std': 2.0},
+    'vacuum_level': {'mean': 2.0,  'std': 0.5},
+    'ball_placement_accuracy': {'mean': 5.0,  'std': 2.0},
+    'laser_pulse_energy': {'mean': 12.0, 'std': 0.5},
+    'reflow_peak_temp': {'mean': 260,  'std': 2.0},
+    'flux_density': {'mean': 0.8,  'std': 0.05},
+    'spindle_current': {'mean': 2.0,  'std': 0.1},
+    'vibration_amplitude': {'mean': 0.5,  'std': 0.1},
+    'blade_wear_index': {'mean': 0.3,  'std': 0.1},
+    'cooling_water_flow': {'mean': 1.5,  'std': 0.1}
+}
+
 class PhysicsRuleEngine:
     """
     Shield 3: Physics-based heuristic rule engine.
@@ -99,13 +125,22 @@ class PhysicsRuleEngine:
         if not all(c in df.columns for c in required):
             return score
 
-        temp_low = df['molding_temperature'] < df['molding_temperature'].quantile(0.25)
-        vacuum_low = df['vacuum_level'] < df['vacuum_level'].quantile(0.25)
+        temp_mean = NOMINAL_STATS['molding_temperature']['mean']
+        temp_std = NOMINAL_STATS['molding_temperature']['std']
+        vac_mean = NOMINAL_STATS['vacuum_level']['mean']
+        vac_std = NOMINAL_STATS['vacuum_level']['std']
+
+        # Low temp and low vacuum (< 25th percentile approx is mean - 0.67*std)
+        p25_temp = temp_mean - 0.67 * temp_std
+        p25_vac = vac_mean - 0.67 * vac_std
+
+        temp_low = df['molding_temperature'] < p25_temp
+        vacuum_low = df['vacuum_level'] < p25_vac
         both_low = temp_low & vacuum_low
 
         temp_severity = np.clip(
-            (df['molding_temperature'].quantile(0.25) - df['molding_temperature']) /
-            (df['molding_temperature'].quantile(0.25) - df['molding_temperature'].min() + 1e-10),
+            (p25_temp - df['molding_temperature']) /
+            (p25_temp - (temp_mean - 3 * temp_std) + 1e-10),
             0, 1
         )
         score = np.where(both_low, temp_severity, 0.0)
@@ -201,12 +236,13 @@ class PhysicsRuleEngine:
         if len(available) < 10:
             return score
 
-        # Count how many sensors fall in the marginal zone (20th-40th percentile)
+        # Count how many sensors fall in the marginal zone (|z| > 1.5 and |z| < 3.0)
         marginal_count = pd.Series(0, index=df.index)
         for col in available:
-            p20 = df[col].quantile(0.20)
-            p40 = df[col].quantile(0.40)
-            in_marginal = (df[col] >= p20) & (df[col] <= p40)
+            mean = NOMINAL_STATS[col]['mean']
+            std = NOMINAL_STATS[col]['std']
+            z_score = (df[col] - mean) / std
+            in_marginal = (z_score.abs() > 1.5) & (z_score.abs() < 3.0)
             marginal_count += in_marginal.astype(int)
 
         # 5+ sensors marginal = warning, scales up to 10+
@@ -239,15 +275,12 @@ class PhysicsRuleEngine:
         if not all(c in df.columns for c in required):
             return score
 
-        # Compute z-scores relative to median
+        # Compute z-scores relative to engineering spec limits
         deviations = pd.DataFrame(index=df.index)
         for col in required:
-            median = df[col].median()
-            mad = (df[col] - median).abs().median()  # Median Absolute Deviation
-            if mad < 1e-10:
-                deviations[col] = 0.0
-            else:
-                deviations[col] = (df[col] - median) / (mad * 1.4826)  # Scale to match std
+            mean = NOMINAL_STATS[col]['mean']
+            std = NOMINAL_STATS[col]['std']
+            deviations[col] = (df[col] - mean) / std
 
         # All 3 deviating in the same direction (all positive or all negative)
         all_positive = (deviations > 1.0).all(axis=1)
