@@ -74,6 +74,9 @@ A physics-based **Reduced Order Model** reconstructs the internal stress state o
 </p>
 
 ### 1. Yield Dashboard (Live Telemetry)
+<p align="center">
+  <img src="assets/Tri-Shield Twin Operator Dashboard.png" width="100%" alt="Operator Dashboard" />
+</p>
 Real-time feed-forward telemetry across all 5 assembly stages (Die Bond to Singulation). Industrial color-coded risk indicators with live Cumulative IOL Failure Probability.
 
 ### 2. Unit Investigation (Machine Deep-Dive)
