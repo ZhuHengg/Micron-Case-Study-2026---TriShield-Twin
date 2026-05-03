@@ -69,6 +69,10 @@ A physics-based **Reduced Order Model** reconstructs the internal stress state o
 
 ## Key Features
 
+<p align="center">
+  <img src="assets/Tri-Shield Twin Feature.png" width="100%" alt="Tri-Shield Twin Features" />
+</p>
+
 ### 1. Yield Dashboard (Live Telemetry)
 Real-time feed-forward telemetry across all 5 assembly stages (Die Bond to Singulation). Industrial color-coded risk indicators with live Cumulative IOL Failure Probability.
 
