@@ -2,6 +2,15 @@
   <img src="assets/Title_Page.png" width="100%" alt="Tri-Shield Twin" />
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/Status-Production%20Ready-brightgreen?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
+  <img src="https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi" />
+  <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" />
+</p>
+
 <h1 align="center">Tri-Shield Twin</h1>
 <p align="center"><b>Physics-Informed Reliability Intelligence for Semiconductor Backend Assembly</b></p>
 
@@ -276,16 +285,24 @@ The dashboard will be available at `http://localhost:5173`.
 
 ---
 
-## Tech Stack
+### Machine Learning & Data Science
+![Scikit-Learn](https://img.shields.io/badge/scikit--learn-%23F7931E.svg?style=for-the-badge&logo=scikit-learn&logoColor=white)
+![LightGBM](https://img.shields.io/badge/LightGBM-3776AB?style=for-the-badge)
+![Pandas](https://img.shields.io/badge/pandas-%23150458.svg?style=for-the-badge&logo=pandas&logoColor=white)
+![NumPy](https://img.shields.io/badge/numpy-%23013243.svg?style=for-the-badge&logo=numpy&logoColor=white)
+![SHAP](https://img.shields.io/badge/SHAP-black?style=for-the-badge)
 
-| Layer | Technology |
-|-------|-----------|
-| **ML Framework** | LightGBM, Scikit-learn (Isolation Forest), SHAP |
-| **Physics Engine** | NumPy (POD/SVD), Polynomial Ridge Regression |
-| **API** | FastAPI + Uvicorn |
-| **Frontend** | React 18 + Vite + TailwindCSS |
-| **Visualization** | Recharts, Chart.js, Canvas API (Stress Heatmap) |
-| **Data** | Pandas, NumPy (200K synthetic units) |
+### Frontend & Visualization
+![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
+![Vite](https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![Chart.js](https://img.shields.io/badge/chart.js-F5788D.svg?style=for-the-badge&logo=chart.js&logoColor=white)
+![Recharts](https://img.shields.io/badge/Recharts-22b5bf?style=for-the-badge)
+
+### Backend & API
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
+![Uvicorn](https://img.shields.io/badge/uvicorn-20232A?style=for-the-badge&logo=python&logoColor=white)
+![Pydantic](https://img.shields.io/badge/Pydantic-E92063?style=for-the-badge&logo=pydantic&logoColor=white)
 
 ---
 
