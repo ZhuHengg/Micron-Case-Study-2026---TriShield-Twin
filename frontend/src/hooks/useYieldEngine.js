@@ -1,5 +1,19 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { generateUnitData } from '../utils/yieldSimulation'
+import { scoreUnit } from '../utils/defectScoring'
+
+// Helper to map raw 0-100 risk score to a visual 0-1 scale for the UI gauge
+const mapRiskScoreToVisual = (rawScore, isVeto) => {
+  if (isVeto) return 0.85 + (Math.random() * 0.1) // Force into high red zone
+
+  if (rawScore < 20) {
+    return (rawScore / 20) * 0.39
+  } else if (rawScore < 36.66) {
+    return 0.40 + ((rawScore - 20) / (36.66 - 20)) * 0.29
+  } else {
+    return Math.min(1.0, 0.70 + ((rawScore - 36.66) / (100 - 36.66)) * 0.30)
+  }
+}
 
 /**
  * useYieldEngine
@@ -143,7 +157,7 @@ export function useYieldEngine() {
             riskScore: scored.risk_score,
             riskLevel: scored.risk_level === 'Block' ? 'HIGH' : scored.risk_level === 'Flag' ? 'MEDIUM' : 'LOW',
             decision: scored.risk_level === 'Block' ? 'REJECT' : scored.risk_level === 'Flag' ? 'REVIEW' : 'PASS',
-            ensembleScore: scored.risk_score / 100,
+            ensembleScore: mapRiskScoreToVisual(scored.risk_score, scored.risk_level === 'Block' && scored.reasons?.some(r => r.includes('VETO'))),
             lgbScore: scored.shield1_score / 100,
             isoScore: scored.shield2_score / 100,
             behScore: scored.shield3_score / 100,
