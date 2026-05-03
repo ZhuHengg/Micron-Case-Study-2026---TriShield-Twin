@@ -4,7 +4,7 @@ import {
   Zap, Beaker, RefreshCw, Settings, Sun, Moon
 } from 'lucide-react'
 import clsx from 'clsx'
-import micronLogo from '../../micron-logo/micron-logo-J6vsDRis_t.jpg'
+import micronLogo from '../../micron-logo/micron-logo.png'
 
 export default function Sidebar({ activeTab, setActiveTab }) {
   const [isDark, setIsDark] = useState(true)

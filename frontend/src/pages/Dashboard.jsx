@@ -102,8 +102,8 @@ function GaugeChart({ score, decision }) {
         />
         {/* Needle */}
         <g transform={`rotate(${angle}, ${cx}, ${cy})`} className="transition-all duration-1000 ease-out">
-          <polygon points={`${cx - 4},${cy} ${cx + 4},${cy} ${cx},${cy - radius + 10}`} fill="#334155" />
-          <circle cx={cx} cy={cy} r="6" fill="#334155" />
+          <polygon points={`${cx - 4},${cy} ${cx + 4},${cy} ${cx},${cy - radius + 10}`} className="fill-slate-700 dark:fill-slate-400" />
+          <circle cx={cx} cy={cy} r="6" className="fill-slate-700 dark:fill-slate-400" />
           <circle cx={cx} cy={cy} r="2" fill="#ffffff" />
         </g>
       </svg>
@@ -141,7 +141,7 @@ const KpiCard = ({ icon: Icon, iconColor, label, value, subtitle, trend, trendUp
           </span>
         )}
       </div>
-      {subtitle && <span className="font-sans text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{subtitle}</span>}
+      {subtitle && <span className="font-sans text-[11px] font-bold text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-wider">{subtitle}</span>}
     </div>
   </div>
 )
@@ -267,7 +267,7 @@ export default function Dashboard({ engine }) {
                 <h2 className="font-sans text-[12px] font-black text-slate-800 dark:text-white uppercase tracking-[0.2em] transition-colors">
                   Unit Inventory Directory
                 </h2>
-                <span className="font-mono text-[10px] font-black text-[#0066CC] bg-[#0066CC]/5 px-3 py-1 rounded-full">
+                <span className="font-mono text-[10px] font-black text-[#0066CC] dark:text-[#00A3AD] bg-[#0066CC]/5 dark:bg-[#00A3AD]/10 px-3 py-1 rounded-full">
                   {filteredUnits.length} / {total} TOTAL TRACEABILITY
                 </span>
               </div>
@@ -302,7 +302,7 @@ export default function Dashboard({ engine }) {
               </div>
 
               {/* Decision Filter */}
-              <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/10 rounded-xl p-1">
                 {['All', 'PASS', 'REVIEW', 'REJECT'].map(opt => (
                   <button
                     key={opt}
@@ -310,8 +310,8 @@ export default function Dashboard({ engine }) {
                     className={clsx(
                       "px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all",
                       filterDecision === opt
-                        ? "bg-white text-slate-800 shadow-sm"
-                        : "text-slate-400 hover:text-slate-600"
+                        ? "bg-white dark:bg-white/20 text-slate-800 dark:text-white shadow-sm"
+                        : "text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                     )}
                   >
                     {opt}
@@ -322,14 +322,14 @@ export default function Dashboard({ engine }) {
           </div>
 
           {/* Table Header */}
-          <div className="grid grid-cols-[2fr_1.2fr_1fr_1fr_1.5fr_1fr_1fr] gap-4 px-8 py-3 border-b border-slate-100 bg-slate-50/30 shrink-0">
-            <span className="font-sans text-[10px] font-black text-slate-400 uppercase tracking-widest">Unit ID</span>
-            <span className="font-sans text-[10px] font-black text-slate-400 uppercase tracking-widest">Lot / Fab</span>
-            <span className="font-sans text-[10px] font-black text-slate-400 uppercase tracking-widest">Decision</span>
-            <span className="font-sans text-[10px] font-black text-slate-400 uppercase tracking-widest">Risk Score</span>
-            <span className="font-sans text-[10px] font-black text-slate-400 uppercase tracking-widest">Archetype / Bin</span>
-            <span className="font-sans text-[10px] font-black text-slate-400 uppercase tracking-widest">Shields</span>
-            <span className="font-sans text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Timestamp</span>
+          <div className="grid grid-cols-[2fr_1.2fr_1fr_1fr_1.5fr_1fr_1fr] gap-4 px-8 py-3 border-b border-slate-100 dark:border-white/5 bg-slate-50/30 dark:bg-white/5 shrink-0">
+            <span className="font-sans text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Unit ID</span>
+            <span className="font-sans text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Lot / Fab</span>
+            <span className="font-sans text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Decision</span>
+            <span className="font-sans text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Risk Score</span>
+            <span className="font-sans text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Archetype / Bin</span>
+            <span className="font-sans text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Shields</span>
+            <span className="font-sans text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest text-right">Timestamp</span>
           </div>
 
           {/* Scrollable List */}
@@ -360,19 +360,19 @@ export default function Dashboard({ engine }) {
                     key={unit.unit_id || unit.id || idx}
                     onClick={() => setSelectedUnitId(unit.unit_id || unit.id)}
                     className={clsx(
-                      "grid grid-cols-[2fr_1.2fr_1fr_1fr_1.5fr_1fr_1fr] gap-4 px-8 py-2.5 border-b border-slate-50 transition-all hover:bg-slate-50/80 group items-center cursor-pointer",
+                      "grid grid-cols-[2fr_1.2fr_1fr_1fr_1.5fr_1fr_1fr] gap-4 px-8 py-2.5 border-b border-slate-50 dark:border-white/5 transition-all hover:bg-slate-50/80 dark:hover:bg-white/5 group items-center cursor-pointer",
                       idx === 0 && "animate-pop-out",
-                      selectedUnitId === (unit.unit_id || unit.id) && "bg-slate-50 ring-1 ring-inset ring-slate-200"
+                      selectedUnitId === (unit.unit_id || unit.id) && "bg-slate-50 dark:bg-white/10 ring-1 ring-inset ring-slate-200 dark:ring-white/20"
                     )}
                   >
                     {/* Unit ID */}
                     <div className="flex items-center gap-3 min-w-0">
                       <div className={clsx("w-2 h-2 rounded-full shrink-0 shadow-sm", bin.dot)} />
                       <div className="flex flex-col min-w-0">
-                        <span className="font-mono text-[14px] font-black text-slate-800 tracking-tight truncate uppercase">
+                        <span className="font-mono text-[14px] font-black text-slate-800 dark:text-white tracking-tight truncate uppercase">
                           {unit.unit_id || unit.id}
                         </span>
-                        <span className="font-mono text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                        <span className="font-mono text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                           WAF-{unit.waferNum || '—'}
                         </span>
                       </div>
@@ -380,10 +380,10 @@ export default function Dashboard({ engine }) {
 
                     {/* Lot / Fab */}
                     <div className="flex flex-col min-w-0">
-                      <span className="font-mono text-[12px] font-bold text-slate-600 truncate">
+                      <span className="font-mono text-[12px] font-bold text-slate-600 dark:text-slate-200 truncate">
                         {unit.lotId || '—'}
                       </span>
-                      <span className="text-[9px] font-black text-[#0066CC] uppercase tracking-widest">
+                      <span className="text-[9px] font-black text-[#0066CC] dark:text-[#00A3AD] uppercase tracking-widest">
                         {unit.fab || 'Fab 20'}
                       </span>
                     </div>
@@ -403,14 +403,14 @@ export default function Dashboard({ engine }) {
                       <div className="flex items-baseline justify-between">
                         <span className={clsx(
                           "font-mono text-[14px] font-black leading-none tabular-nums",
-                          riskNorm >= 7 ? 'text-red-600' : riskNorm > 4 ? 'text-amber-600' : 'text-[#00A3AD]'
+                          riskNorm >= 7 ? 'text-red-600 dark:text-red-400' : riskNorm > 4 ? 'text-amber-600 dark:text-amber-400' : 'text-[#00A3AD] dark:text-[#00A3AD]'
                         )}>
                           {riskNorm.toFixed(1)}
                         </span>
-                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">IDX</span>
+                        <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">IDX</span>
                       </div>
                       {/* Mini visual gauge */}
-                      <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-1 w-full bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
                         <div
                           className={clsx(
                             "h-full rounded-full transition-all duration-500",
@@ -423,7 +423,7 @@ export default function Dashboard({ engine }) {
 
                     {/* Archetype / Bin */}
                     <div className="flex flex-col gap-1 min-w-0">
-                      <span className="font-sans text-[12px] font-bold text-slate-700 truncate">
+                      <span className="font-sans text-[12px] font-bold text-slate-700 dark:text-white truncate">
                         {unit.archetype || 'Nominal'}
                       </span>
                       <span className={clsx("font-sans text-[10px] font-black uppercase tracking-wider", bin.text)}>
@@ -434,30 +434,30 @@ export default function Dashboard({ engine }) {
                     {/* Shield Scores (compact) */}
                     <div className="flex items-center gap-2">
                       <div className="flex flex-col items-center">
-                        <span className="text-[9px] font-black text-slate-400 uppercase">LGB</span>
+                        <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase">LGB</span>
                         <span className={clsx(
                           "text-[12px] font-black tabular-nums",
-                          (unit.lgbScore || 0) > 0.6 ? 'text-red-500' : 'text-slate-600'
+                          (unit.lgbScore || 0) > 0.6 ? 'text-red-500 dark:text-red-400' : 'text-slate-600 dark:text-slate-300'
                         )}>
                           {((unit.lgbScore || 0) * 100).toFixed(0)}
                         </span>
                       </div>
-                      <div className="w-px h-6 bg-slate-100" />
+                      <div className="w-px h-6 bg-slate-100 dark:bg-white/10" />
                       <div className="flex flex-col items-center">
-                        <span className="text-[9px] font-black text-slate-400 uppercase">ISO</span>
+                        <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase">ISO</span>
                         <span className={clsx(
                           "text-[12px] font-black tabular-nums",
-                          (unit.isoScore || 0) > 0.5 ? 'text-amber-500' : 'text-slate-600'
+                          (unit.isoScore || 0) > 0.5 ? 'text-amber-500 dark:text-amber-400' : 'text-slate-600 dark:text-slate-300'
                         )}>
                           {((unit.isoScore || 0) * 100).toFixed(0)}
                         </span>
                       </div>
-                      <div className="w-px h-6 bg-slate-100" />
+                      <div className="w-px h-6 bg-slate-100 dark:bg-white/10" />
                       <div className="flex flex-col items-center">
-                        <span className="text-[9px] font-black text-slate-400 uppercase">BEH</span>
+                        <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase">BEH</span>
                         <span className={clsx(
                           "text-[12px] font-black tabular-nums",
-                          (unit.behScore || 0) > 0.6 ? 'text-red-500' : 'text-slate-600'
+                          (unit.behScore || 0) > 0.6 ? 'text-red-500 dark:text-red-400' : 'text-slate-600 dark:text-slate-300'
                         )}>
                           {((unit.behScore || 0) * 100).toFixed(0)}
                         </span>
@@ -467,10 +467,10 @@ export default function Dashboard({ engine }) {
                     {/* Timestamp */}
                     <div className="flex items-center justify-end">
                       <div className="flex flex-col items-end">
-                        <span className="font-sans text-[12px] font-bold text-slate-600 tabular-nums">
+                        <span className="font-sans text-[12px] font-bold text-slate-600 dark:text-slate-200 tabular-nums">
                           {timeStr}
                         </span>
-                        <span className="font-sans text-[9px] font-bold text-slate-300 uppercase tracking-wider">
+                        <span className="font-sans text-[9px] font-bold text-slate-300 dark:text-slate-500 uppercase tracking-wider">
                           {unit.latencyMs ? `${unit.latencyMs}ms` : '—'}
                         </span>
                       </div>

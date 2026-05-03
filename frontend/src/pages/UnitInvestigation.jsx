@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { 
-  Cpu, Zap, Thermometer, Microscope, Scissors, CheckCircle, 
+import {
+  Cpu, Zap, Thermometer, Microscope, Scissors, CheckCircle,
   Search, AlertTriangle, ChevronDown, Filter, Settings2,
   AlertCircle, Activity, Box, Database, Clock, TrendingUp, ShieldAlert, Droplet,
   XCircle, BookOpen
@@ -96,7 +96,7 @@ function gaussianHotspot(x, y, cx, cy, sigma, amplitude) {
 function computeMockStressField(unit) {
   const GRID = 50
   const grid = Array.from({ length: GRID }, () => Array.from({ length: GRID }, () => 20.0))
-  
+
   const dev = (key) => {
     const val = unit[key] ?? ROM_NOMINAL[key]
     const hr = ROM_HALF_RANGE[key] || 1
@@ -162,7 +162,7 @@ function computeMockStressField(unit) {
 function computeMockSensitivity(unit) {
   const sensitivities = {}
   const params = Object.keys(ROM_NOMINAL)
-  
+
   params.forEach(p => {
     const val = unit[p] ?? ROM_NOMINAL[p]
     const hr = ROM_HALF_RANGE[p] || 1
@@ -202,30 +202,26 @@ function StressHeatmapCanvas({ stressGrid, maxStress }) {
       for (let col = 0; col < gridSize; col++) {
         const val = stressGrid[row][col]
         const norm = Math.min(val / max, 1)
-        
-        // Professional Gradient: Micron Blue (#0066CC) -> High-Risk Red (#EF4444)
-        // We'll interpolate RGB values
-        const r = Math.round(0 + norm * (239 - 0))
-        const g = Math.round(102 + norm * (68 - 102))
-        const b = Math.round(204 + norm * (68 - 204))
-        
-        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`
-        ctx.fillRect(col * cellW, row * cellH, cellW + 0.5, cellH + 0.5)
+
+        // Restoring the classic, highly-readable thermal gradient
+        const hue = (1 - norm) * 240 // blue (240) → red (0)
+        ctx.fillStyle = `hsl(${hue}, 100%, 50%)`
+        ctx.fillRect(Math.floor(col * cellW), Math.floor(row * cellH), Math.ceil(cellW), Math.ceil(cellH))
       }
     }
   }, [stressGrid, maxStress])
 
   return (
     <div className="relative group">
-      <canvas 
-        ref={canvasRef} 
-        width={300} 
-        height={300} 
+      <canvas
+        ref={canvasRef}
+        width={300}
+        height={300}
         className="rounded-[24px] border border-slate-200/60 shadow-inner w-full aspect-square"
         style={{ imageRendering: 'pixelated' }}
       />
       <div className="absolute inset-0 rounded-[24px] ring-1 ring-inset ring-white/20 pointer-events-none" />
-      
+
       {/* Overlay Vignette */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-40 rounded-[24px] pointer-events-none" />
     </div>
@@ -286,9 +282,9 @@ function GaugeChart({ score, decision }) {
         </g>
       </svg>
       <div className="absolute bottom-[-20px] text-center w-full">
-         <span className={clsx("text-3xl font-black font-sans leading-none", 
-            decision === 'REJECT' ? 'text-red-600' : decision === 'REVIEW' ? 'text-amber-600' : 'text-emerald-600'
-         )}>{score.toFixed(1)}</span>
+        <span className={clsx("text-3xl font-black font-mono leading-none",
+          decision === 'REJECT' ? 'text-red-400' : decision === 'REVIEW' ? 'text-amber-400' : 'text-emerald-400'
+        )}>{score.toFixed(1)}</span>
       </div>
     </div>
   )
@@ -297,9 +293,9 @@ function GaugeChart({ score, decision }) {
 export default function UnitInvestigation({ engine }) {
   const { allUnits } = engine || { allUnits: [] }
   const [sortMode, setSortMode] = useState('Highest Risk')
+  const [searchTerm, setSearchTerm] = useState('')
   const [selectedUnitId, setSelectedUnitId] = useState(null)
   const [activeStageId, setActiveStageId] = useState(1)
-  const [searchTerm, setSearchTerm] = useState('')
 
   // Sort units
   const sortedUnits = useMemo(() => {
@@ -330,11 +326,11 @@ export default function UnitInvestigation({ engine }) {
   const romParams = useMemo(() => {
     if (!activeUnit) return null
     const keys = [
-      'bond_force','xy_placement_offset','bond_line_thickness','epoxy_viscosity','pick_place_speed',
-      'ultrasonic_power','bond_time','loop_height','capillary_stroke_count','efo_voltage',
-      'transfer_pressure','clamping_force','molding_temperature','vacuum_level',
-      'ball_placement_accuracy','laser_pulse_energy','reflow_peak_temp','flux_density',
-      'spindle_current','vibration_amplitude','blade_wear_index','cooling_water_flow'
+      'bond_force', 'xy_placement_offset', 'bond_line_thickness', 'epoxy_viscosity', 'pick_place_speed',
+      'ultrasonic_power', 'bond_time', 'loop_height', 'capillary_stroke_count', 'efo_voltage',
+      'transfer_pressure', 'clamping_force', 'molding_temperature', 'vacuum_level',
+      'ball_placement_accuracy', 'laser_pulse_energy', 'reflow_peak_temp', 'flux_density',
+      'spindle_current', 'vibration_amplitude', 'blade_wear_index', 'cooling_water_flow'
     ]
     const p = {}
     keys.forEach(k => { p[k] = activeUnit[k] ?? 0 })
@@ -360,104 +356,78 @@ export default function UnitInvestigation({ engine }) {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] w-full max-w-[1600px] mx-auto font-sans bg-transparent">
-      
-      {/* ═════════ ZONE 1: HERO PIPELINE (Top Navigation) ═════════ */}
-      <div className="flex items-center gap-6 overflow-x-auto custom-scrollbar shrink-0 px-8 py-6 bg-white border-b border-slate-200 shadow-sm z-10 relative">
-        <div className="absolute top-1/2 left-24 right-24 h-1 bg-slate-100 -translate-y-1/2 -z-10" />
+    <div className="flex flex-col h-[calc(100vh-80px)] w-full max-w-[1600px] mx-auto font-sans bg-gradient-to-br from-[#050A18] to-[#111827] relative overflow-hidden text-slate-100 transition-colors duration-500">
+      <style>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        @keyframes subtle-pulse {
+          0%, 100% { opacity: 0.4; transform: scale(1); }
+          50% { opacity: 0.6; transform: scale(1.05); }
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+          height: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.02);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 10px;
+        }
+        .electric-grid {
+          background-size: 40px 40px;
+          background-image: 
+            linear-gradient(to right, rgba(0, 102, 204, 0.05) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(0, 102, 204, 0.05) 1px, transparent 1px);
+        }
+      `}</style>
 
-        {STAGES.map((stage) => {
-          const rrs = (activeUnit[`rrs_${stage.id}`] || 0) * 10
-          const delta = (activeUnit[`rrs_delta_${stage.id}`] || 0) * 10
-          
-          const isSkipped = stage.id > terminationStage
-          const isTerminal = stage.id === terminationStage && (activeUnit.decision === 'REJECT' || activeUnit.decision === 'REVIEW')
-          const isSelected = activeStageId === stage.id
-          
-          let statusColor = "bg-emerald-50 text-emerald-700 border-emerald-200"
-          let iconColor = "text-emerald-500"
-          if (isSkipped) {
-            statusColor = "bg-slate-50 text-slate-400 border-slate-200"
-            iconColor = "text-slate-300"
-          } else if (isTerminal || rrs >= 8.5) {
-            statusColor = "bg-red-50 text-red-700 border-red-200"
-            iconColor = "text-red-500"
-          } else if (rrs > 5.0 || delta > 3.0) {
-            statusColor = "bg-amber-50 text-amber-700 border-amber-200"
-            iconColor = "text-amber-500"
-          }
+      {/* Electric Grid Background */}
+      <div className="absolute inset-0 electric-grid pointer-events-none" />
 
-          return (
-            <button
-              key={stage.id}
-              onClick={() => setActiveStageId(stage.id)}
-              className={clsx(
-                "flex-1 flex flex-col items-center gap-3 transition-all relative group",
-                isSelected ? "scale-105" : "hover:scale-105"
-              )}
-            >
-              <div className={clsx(
-                "w-14 h-14 rounded-2xl flex items-center justify-center border-2 transition-all bg-white",
-                statusColor,
-                isSelected ? "shadow-lg scale-110" : "shadow-sm"
-              )}
-              style={isSelected ? { borderColor: STAGE_COLORS[stage.id], ringColor: STAGE_COLORS[stage.id], ringWidth: '4px' } : {}}
-              >
-                <stage.icon size={24} className={iconColor} style={isSelected && !isTerminal && !isSkipped ? { color: STAGE_COLORS[stage.id] } : {}} />
-              </div>
+      {/* Dynamic Background Glows (Atmospheric) */}
+      <div className={clsx(
+        "absolute -bottom-24 -left-24 w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none transition-all duration-1000 animate-subtle-pulse",
+        activeUnit.decision === 'REJECT' ? "bg-red-600/10" : activeUnit.decision === 'REVIEW' ? "bg-amber-600/10" : "bg-blue-600/10"
+      )} />
+      <div className={clsx(
+        "absolute -top-24 -right-24 w-[400px] h-[400px] rounded-full blur-[100px] pointer-events-none transition-all duration-1000",
+        activeUnit.decision === 'REJECT' ? "bg-red-500/5" : activeUnit.decision === 'REVIEW' ? "bg-amber-500/5" : "bg-purple-600/5"
+      )} />
 
-              <div className="text-center">
-                <h4 className={clsx("text-[10px] font-black uppercase tracking-widest", isSkipped ? "text-slate-400" : "text-slate-800")}>
-                  {stage.name}
-                </h4>
-                {!isSkipped && (
-                  <div className="flex flex-col items-center mt-1">
-                    <span className={clsx("text-xs font-bold", rrs >= 8.5 ? "text-red-600" : "text-slate-500")}>
-                      RRS: {rrs.toFixed(1)}
-                    </span>
-                    {delta > 2.0 && (
-                      <span className="text-[9px] font-black text-red-500 bg-red-50 px-1.5 rounded">+ {delta.toFixed(1)}</span>
-                    )}
-                  </div>
-                )}
-                {isTerminal && (
-                  <Badge className="bg-red-500 text-white mt-1 border-none shadow-md text-[9px] py-0">TERMINATED</Badge>
-                )}
-                {isSkipped && (
-                  <span className="text-[10px] font-bold text-slate-400 mt-1 block">SKIPPED</span>
-                )}
-              </div>
-            </button>
-          )
-        })}
-      </div>
 
-      <div className="flex gap-6 flex-1 min-h-0 p-6">
-        
+      {/* ══════════════════════════════════════════════════════════════════════════ */}
+      {/* Main Content Area (Now starting from top) */}
+      <div className="flex gap-6 flex-1 min-h-0 p-6 pt-8">
+
         {/* ═════════ ZONE 2: UNIT DIRECTORY (Left 30%) ═════════ */}
         <div className="w-[380px] shrink-0 flex flex-col gap-4">
-          <Card className="flex-1 flex flex-col border-slate-200 shadow-sm rounded-[24px] overflow-hidden bg-white">
-            <CardHeader className="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+          <Card className="flex-1 flex flex-col border-white/10 shadow-2xl rounded-[24px] overflow-hidden bg-[#1E293B]/50 backdrop-blur-[15px]">
+            <CardHeader className="px-6 py-5 border-b border-white/5 bg-white/5">
               <div className="flex items-center justify-between mb-2">
-                <CardTitle className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                  <Database size={16} className="text-[#0066CC]" />
+                <CardTitle className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                  <Database size={16} className="text-[#0066CC] drop-shadow-[0_0_5px_rgba(0,102,204,0.6)]" />
                   Unit Directory
                 </CardTitle>
-                <Badge variant="outline" className="text-[10px] font-bold bg-white">{allUnits.length} Live</Badge>
+                <Badge variant="outline" className="text-[10px] font-bold bg-white/5 text-slate-300 border-white/10">{allUnits.length} Live</Badge>
               </div>
               <div className="relative">
                 <select
                   value={sortMode}
                   onChange={e => setSortMode(e.target.value)}
-                  className="w-full appearance-none bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500/20 uppercase tracking-wider cursor-pointer shadow-sm"
+                  className="w-full appearance-none bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0066CC]/40 uppercase tracking-wider cursor-pointer shadow-inner"
                 >
-                  <option>Highest Risk</option>
-                  <option>Lowest Risk</option>
-                  <option>Most Recent</option>
+                  <option className="bg-slate-900 text-white">Highest Risk</option>
+                  <option className="bg-slate-900 text-white">Lowest Risk</option>
+                  <option className="bg-slate-900 text-white">Most Recent</option>
                 </select>
-                <Filter size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <Filter size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
               </div>
             </CardHeader>
+
 
             {/* Search */}
             <div className="px-4 pt-3 pb-1 shrink-0">
@@ -468,43 +438,54 @@ export default function UnitInvestigation({ engine }) {
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                   placeholder="Search unit ID, lot..."
-                  className="w-full pl-9 pr-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-300 placeholder:text-slate-300 shadow-sm"
+                  className="w-full pl-9 pr-3 py-2 text-xs font-bold text-slate-100 bg-slate-800/40 border border-white/5 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066CC]/40 focus:border-[#0066CC]/50 placeholder:text-slate-600 shadow-inner"
                 />
               </div>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
               {filteredUnits.map(unit => {
                 const isSelected = (activeUnit.unit_id || activeUnit.id) === (unit.unit_id || unit.id)
                 const risk = (unit.ensembleScore || 0) * 10
                 const statusColor = risk >= 7 ? 'bg-red-500' : risk > 4 ? 'bg-amber-500' : 'bg-emerald-500'
-                
+
                 return (
                   <button
                     key={unit.unit_id || unit.id}
                     onClick={() => setSelectedUnitId(unit.unit_id || unit.id)}
                     className={clsx(
-                      "w-full text-left p-4 rounded-2xl transition-all border group flex items-center justify-between",
-                      isSelected ? "bg-slate-50 shadow-sm ring-1 border-sky-500 ring-sky-500" : "bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50"
+                      "w-full text-left p-4 rounded-2xl transition-all border group flex items-center justify-between relative overflow-hidden",
+                      isSelected
+                        ? (unit.decision === 'REJECT'
+                          ? "bg-red-500/20 border-red-500/50 shadow-[inset_0_0_30px_rgba(239,68,68,0.2)]"
+                          : unit.decision === 'REVIEW'
+                            ? "bg-amber-500/20 border-amber-500/50 shadow-[inset_0_0_30px_rgba(245,158,11,0.2)]"
+                            : "bg-[#0066CC]/20 border-[#0066CC]/50 shadow-[inset_0_0_20px_rgba(0,102,204,0.1)]")
+                        : "bg-white/5 border-white/5 hover:border-white/20 hover:bg-white/10"
                     )}
                   >
-                    <div className="flex items-center gap-4">
-                      <div className={clsx("w-2.5 h-2.5 rounded-full shadow-sm shrink-0", statusColor)} />
+                    {/* Glass Shimmer Effect for Selected Unit */}
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[shimmer_2s_infinite] pointer-events-none" />
+                    )}
+
+                    <div className="flex items-center gap-4 relative z-10">
+                      <div className={clsx("w-3 h-3 rounded-full shadow-[0_0_12px_currentColor] shrink-0", statusColor)} />
                       <div className="flex flex-col">
-                        <span className={clsx("text-sm font-black tracking-tight", isSelected ? "text-slate-900" : "text-slate-800")}>
+                        <span className={clsx("text-sm font-black tracking-tight font-mono", isSelected ? "text-white" : "text-slate-300")}>
                           {unit.unit_id || unit.id}
                         </span>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                        <span className={clsx("text-[9px] font-black uppercase tracking-widest mt-0.5", isSelected ? "text-white/80" : "text-slate-500")}>
                           {unit.decision}
                         </span>
                       </div>
                     </div>
-                    
+
                     <div className="flex flex-col items-end">
-                      <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-1">Risk</span>
+                      <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">Risk</span>
                       <span className={clsx(
-                        "font-sans text-lg font-black leading-none",
-                        risk >= 7 ? 'text-red-500' : risk > 4 ? 'text-amber-500' : 'text-emerald-500'
+                        "text-lg font-black leading-none font-mono",
+                        risk >= 7 ? 'text-red-400' : risk > 4 ? 'text-amber-400' : 'text-emerald-400'
                       )}>
                         {risk.toFixed(1)}
                       </span>
@@ -518,44 +499,90 @@ export default function UnitInvestigation({ engine }) {
 
         {/* ═════════ ZONE 3: DEEP DIVE & RCA PANEL (Right 70%) ═════════ */}
         <div className="flex-1 flex flex-col gap-6 min-h-0 overflow-y-auto custom-scrollbar pb-6">
-          
-          {/* ROW A: Bin Classification + Archetype + Decision Summary */}
+
+          {/* ═════════ NEW: STAGE PROCESS PIPELINE (Integrated) ═════════ */}
+          <div className="flex items-center gap-4 overflow-x-auto custom-scrollbar shrink-0 px-6 py-4 rounded-[20px] bg-[#1E293B]/40 backdrop-blur-md ring-1 ring-white/10 shadow-xl relative">
+            <div className="absolute top-1/2 left-12 right-12 h-[1px] bg-white/5 -translate-y-1/2 -z-10" />
+
+            {STAGES.filter(s => s.id <= terminationStage).map((stage) => {
+              const rrs = (activeUnit[`rrs_${stage.id}`] || 0) * 10
+              const isTerminal = stage.id === terminationStage && (activeUnit.decision === 'REJECT' || activeUnit.decision === 'REVIEW')
+              const isSelected = activeStageId === stage.id
+
+              let statusColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+              let iconColor = "text-emerald-400"
+              if (isTerminal || rrs >= 8.5) {
+                statusColor = "bg-red-500/20 text-red-400 border-red-500/40"
+                iconColor = "text-red-400"
+              } else if (rrs > 5.0) {
+                statusColor = "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                iconColor = "text-amber-400"
+              }
+
+              return (
+                <button
+                  key={stage.id}
+                  onClick={() => setActiveStageId(stage.id)}
+                  className={clsx(
+                    "flex-none flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all relative border",
+                    isSelected ? "bg-white/10 border-white/20 shadow-lg" : "bg-transparent border-transparent hover:bg-white/5"
+                  )}
+                >
+                  <div className={clsx(
+                    "w-8 h-8 rounded-lg flex items-center justify-center border transition-all",
+                    statusColor,
+                    isSelected ? "scale-110 shadow-inner" : "scale-100"
+                  )}
+                    style={isSelected ? { borderColor: STAGE_COLORS[stage.id] } : {}}
+                  >
+                    <stage.icon size={16} className={iconColor} style={isSelected && !isTerminal ? { color: STAGE_COLORS[stage.id] } : {}} />
+                  </div>
+                  <div className="text-left">
+                    <h4 className="text-[9px] font-black uppercase tracking-widest text-white leading-none mb-1">{stage.name}</h4>
+                    <span className={clsx("text-[10px] font-black font-mono", rrs >= 8.5 ? "text-red-400" : "text-slate-400")}>
+                      {rrs.toFixed(1)}
+                    </span>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* ROW A: Bin Classification + Archetype + Decision Summary (Redesigned Compact) */}
           <div className="grid grid-cols-3 gap-4 shrink-0">
             {(() => {
               const bin = BIN_INFO[activeUnit.bin_code] || BIN_INFO[1]
               return (
-                <Card className={clsx("border-slate-200 shadow-sm rounded-[24px]", bin.bg)}>
-                  <CardContent className="p-6 flex flex-col items-center justify-center text-center gap-2">
-                    <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center text-white text-lg font-black", bin.color)}>
+                <Card className={clsx("border-none ring-1 ring-white/10 shadow-lg rounded-[20px] bg-[#1E293B]/40 backdrop-blur-md overflow-hidden", bin.bg && "bg-opacity-20")}>
+                  <CardContent className="p-4 flex flex-col items-center justify-center text-center gap-1.5">
+                    <div className={clsx("w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-black shadow-lg", bin.color)}>
                       {activeUnit.bin_code || 1}
                     </div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bin Classification</span>
-                    <span className={clsx("text-sm font-black", bin.textColor)}>{bin.name}</span>
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Bin Class</span>
+                    <span className={clsx("text-xs font-black text-white text-opacity-90 truncate w-full")}>{bin.name}</span>
                   </CardContent>
                 </Card>
               )
             })()}
-            
-            <Card className="border-slate-200 shadow-sm rounded-[24px] bg-white">
-              <CardContent className="p-6 flex flex-col items-center justify-center text-center gap-2">
-                <AlertTriangle size={28} className={activeUnit.decision === 'REJECT' ? "text-red-500" : activeUnit.decision === 'REVIEW' ? "text-amber-500" : "text-emerald-500"} />
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Defect Archetype</span>
-                <span className="text-sm font-black text-slate-800">{activeUnit.archetype || 'Nominal'}</span>
+
+            <Card className="border-none ring-1 ring-white/10 shadow-lg rounded-[20px] bg-[#1E293B]/40 backdrop-blur-md">
+              <CardContent className="p-4 flex flex-col items-center justify-center text-center gap-1.5">
+                <AlertTriangle size={22} className={activeUnit.decision === 'REJECT' ? "text-red-400" : activeUnit.decision === 'REVIEW' ? "text-amber-400" : "text-emerald-400"} />
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Archetype</span>
+                <span className="text-xs font-black text-white truncate w-full">{activeUnit.archetype || 'Nominal'}</span>
               </CardContent>
             </Card>
 
-            <Card className={clsx("border-slate-200 shadow-sm rounded-[24px]",
-              activeUnit.decision === 'REJECT' ? "bg-red-50" : activeUnit.decision === 'REVIEW' ? "bg-amber-50" : "bg-emerald-50"
-            )}>
-              <CardContent className="p-6 flex flex-col items-center justify-center text-center gap-2">
-                <span className={clsx("text-4xl font-black font-sans",
-                  activeUnit.decision === 'REJECT' ? "text-red-600" : activeUnit.decision === 'REVIEW' ? "text-amber-600" : "text-emerald-600"
+            <Card className={clsx("border-none ring-1 ring-white/10 shadow-lg rounded-[20px] bg-[#1E293B]/40 backdrop-blur-md")}>
+              <CardContent className="p-4 flex flex-col items-center justify-center text-center gap-1.5">
+                <span className={clsx("text-2xl font-black font-mono leading-none",
+                  activeUnit.decision === 'REJECT' ? "text-red-500" : activeUnit.decision === 'REVIEW' ? "text-amber-500" : "text-emerald-500"
                 )}>
                   {((activeUnit.ensembleScore || 0) * 10).toFixed(1)}
                 </span>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fused Risk / 10</span>
-                <Badge className={clsx("text-xs font-black border-none",
-                  activeUnit.decision === 'REJECT' ? "bg-red-500" : activeUnit.decision === 'REVIEW' ? "bg-amber-500" : "bg-emerald-500"
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Fused Risk</span>
+                <Badge className={clsx("text-[8px] font-black border-none h-4 px-2",
+                  activeUnit.decision === 'REJECT' ? "bg-red-500/80" : activeUnit.decision === 'REVIEW' ? "bg-amber-500/80" : "bg-emerald-500/80"
                 )}>{activeUnit.decision}</Badge>
               </CardContent>
             </Card>
@@ -563,18 +590,20 @@ export default function UnitInvestigation({ engine }) {
 
           {/* ROW B: Termination Callout (only if terminated early) */}
           {terminationStage < 5 && (
-            <Card className="border-red-200 shadow-sm rounded-[24px] bg-red-50 shrink-0">
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-red-500 flex items-center justify-center shrink-0">
+            <Card className="border-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.1)] rounded-[24px] bg-red-500/10 backdrop-blur-md shrink-0 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-red-500/5 animate-pulse" />
+              <CardContent className="p-6 flex items-center gap-4 relative z-10">
+                <div className="w-12 h-12 rounded-xl bg-red-500 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(239,68,68,0.4)]">
                   <XCircle size={28} className="text-white" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-red-800 uppercase tracking-wide">
+                  <h3 className="text-sm font-black text-red-400 uppercase tracking-wide flex items-center gap-2">
                     Early Termination at Stage {terminationStage}: {STAGES.find(s => s.id === terminationStage)?.name}
+                    <div className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
                   </h3>
-                  <p className="text-xs text-red-600 mt-1">
-                    Cumulative RRS reached <span className="font-black">{((activeUnit[`rrs_${terminationStage}`] || 0) * 10).toFixed(1)}/10</span> — 
-                    exceeding the safety threshold (8.5). Stages {terminationStage + 1}–5 were skipped, 
+                  <p className="text-xs text-red-300/80 mt-1 font-medium">
+                    Cumulative RRS reached <span className="font-black font-mono text-red-400 text-sm">{((activeUnit[`rrs_${terminationStage}`] || 0) * 10).toFixed(1)}/10</span> —
+                    exceeding the safety threshold (8.5). Stages {terminationStage + 1}–5 were skipped,
                     saving processing cost on {5 - terminationStage} machine{5 - terminationStage > 1 ? 's' : ''}.
                   </p>
                 </div>
@@ -583,10 +612,10 @@ export default function UnitInvestigation({ engine }) {
           )}
 
           {/* ROW C: Stage Sensor Telemetry with Deviation Analysis */}
-          <Card className="border-slate-200 shadow-sm rounded-[24px] bg-white shrink-0">
-            <CardHeader className="px-8 py-5 border-b border-slate-100 bg-slate-50/50">
-              <CardTitle className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                <Settings2 size={16} style={{ color: STAGE_COLORS[activeStageId] }} />
+          <Card className="border-white/10 shadow-2xl rounded-[24px] bg-[#1E293B]/40 backdrop-blur-md shrink-0">
+            <CardHeader className="px-8 py-5 border-b border-white/5 bg-white/5">
+              <CardTitle className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                <Settings2 size={16} className="text-[#0066CC] drop-shadow-[0_0_8px_rgba(0,102,204,0.4)]" />
                 Stage {activeStageId}: {STAGES.find(s => s.id === activeStageId).name} — Sensor Deviation Analysis
               </CardTitle>
             </CardHeader>
@@ -598,8 +627,8 @@ export default function UnitInvestigation({ engine }) {
                   <p className="text-xs text-slate-400">This stage was skipped — no sensor data was collected.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
-                  {STAGES.find(s => s.id === activeStageId).params.map(paramKey => {
+                <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+                  {STAGES.find(s => s.id === activeStageId).params.slice(0, 4).map(paramKey => {
                     const val = activeUnit[paramKey]
                     if (val === undefined) return null
                     const ref = SENSOR_NOMINALS[paramKey] || { nominal: 0, unit: '' }
@@ -608,30 +637,32 @@ export default function UnitInvestigation({ engine }) {
 
                     return (
                       <div key={paramKey} className={clsx(
-                        "p-5 rounded-2xl border transition-all",
-                        isSuspicious ? "bg-red-50 border-red-200 ring-1 ring-red-200" : "bg-white border-slate-200 shadow-sm"
+                        "flex-none w-60 p-3 rounded-xl border transition-all relative overflow-hidden",
+                        isSuspicious 
+                          ? "bg-red-500/10 border-red-500/30 ring-1 ring-red-500/20" 
+                          : "bg-white/5 border-white/5 shadow-inner"
                       )}>
-                        <div className="flex justify-between items-start mb-4">
-                          <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest" style={!isSuspicious ? { color: STAGE_COLORS[activeStageId], borderColor: STAGE_COLORS[activeStageId] + '33' } : { color: '#dc2626', borderColor: '#fca5a5' }}>
-                            {isSuspicious ? '⚠ Deviated' : 'Sensor'}
+                        <div className="flex justify-between items-start mb-2 relative z-10">
+                          <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest px-1.5 h-4" style={!isSuspicious ? { color: '#0066CC', borderColor: 'rgba(0,102,204,0.3)' } : { color: '#f87171', borderColor: 'rgba(248,113,113,0.3)' }}>
+                            {isSuspicious ? '⚠ Dev' : 'Sensor'}
                           </Badge>
-                          {isSuspicious && <AlertCircle size={16} className="text-red-500 animate-pulse" />}
-                        </div>
-                        
-                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest leading-tight h-8">{formatParam(paramKey)}</h4>
-                        <div className="flex items-baseline gap-1.5">
-                          <span className={clsx("text-3xl font-sans font-black", isSuspicious ? "text-red-600" : "text-slate-800")} style={!isSuspicious ? { color: STAGE_COLORS[activeStageId] } : {}}>
-                            {Number.isInteger(val) ? val : val.toFixed(2)}
-                          </span>
-                          <span className="text-xs font-bold text-slate-400">{ref.unit}</span>
+                          {isSuspicious && <AlertCircle size={12} className="text-red-400 animate-pulse" />}
                         </div>
 
-                        <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
-                          <span className="text-[10px] font-bold text-slate-400">
-                            Nominal: <span className="text-slate-600">{ref.nominal}{ref.unit}</span>
+                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight h-7 relative z-10 truncate">{formatParam(paramKey)}</h4>
+                        <div className="flex items-baseline gap-1 relative z-10">
+                          <span className={clsx("text-xl font-black font-mono", isSuspicious ? "text-red-400" : "text-white")}>
+                            {Number.isInteger(val) ? val : val.toFixed(2)}
                           </span>
-                          <span className={clsx("text-[10px] font-black", isSuspicious ? "text-red-500" : "text-emerald-500")}>
-                            {deviation > 0.1 ? (isSuspicious ? `↑ ${deviation.toFixed(0)}% off` : `${deviation.toFixed(0)}% dev`) : '✓ On target'}
+                          <span className="text-[8px] font-black font-mono text-slate-500 uppercase">{ref.unit}</span>
+                        </div>
+
+                        <div className="mt-2 pt-2 border-t border-white/5 flex justify-between items-center relative z-10">
+                          <span className="text-[8px] font-bold text-slate-500">
+                            Nominal: <span className="text-slate-400 font-mono">{ref.nominal}</span>
+                          </span>
+                          <span className={clsx("text-[9px] font-black font-mono uppercase tracking-tighter", isSuspicious ? "text-red-400" : "text-emerald-400")}>
+                            {deviation > 0.1 ? `${deviation.toFixed(0)}%` : '✓'}
                           </span>
                         </div>
                       </div>
@@ -643,75 +674,57 @@ export default function UnitInvestigation({ engine }) {
           </Card>
 
           {/* ROW D: Tri-Shield Verdict */}
-          <Card className="flex flex-col border-slate-200 shadow-sm rounded-[24px] overflow-hidden bg-white shrink-0">
-             <CardHeader className="px-8 py-5 border-b border-slate-100 bg-slate-50/50">
-                <CardTitle className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                  <ShieldAlert size={16} className="text-sky-500" />
-                  Tri-Shield Final Verdict & Explainability
-                </CardTitle>
-             </CardHeader>
-             <CardContent className="p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-                
-                <div className="space-y-6">
-                  {/* Gauge Chart for Overall Risk */}
-                  <div className="flex flex-col items-center justify-center mb-8 pb-6 border-b border-slate-100">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Overall Ensemble Risk</span>
-                    <GaugeChart score={(activeUnit.ensembleScore || 0) * 10} decision={activeUnit.decision} />
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Shield 1: LightGBM</span>
-                      <span className={clsx("font-black", activeUnit.lgbScore > 0.6 ? "text-red-500" : "text-emerald-500")}>
-                        {((activeUnit.lgbScore || 0) * 100).toFixed(1)}
-                      </span>
-                    </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className={clsx("h-full rounded-full transition-all", activeUnit.lgbScore > 0.6 ? "bg-red-500" : "bg-emerald-500")} style={{ width: `${(activeUnit.lgbScore || 0) * 100}%` }} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Shield 2: Isolation Forest</span>
-                      <span className={clsx("font-black", activeUnit.isoScore > 0.5 ? "text-amber-500" : "text-emerald-500")}>
-                        {((activeUnit.isoScore || 0) * 100).toFixed(1)}
-                      </span>
-                    </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className={clsx("h-full rounded-full transition-all", activeUnit.isoScore > 0.5 ? "bg-amber-500" : "bg-emerald-500")} style={{ width: `${(activeUnit.isoScore || 0) * 100}%` }} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Shield 3: Physics Rules</span>
-                      <span className={clsx("font-black", activeUnit.behScore > 0.6 ? "text-red-500" : "text-emerald-500")}>
-                        {((activeUnit.behScore || 0) * 100).toFixed(1)}
-                      </span>
-                    </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className={clsx("h-full rounded-full transition-all", activeUnit.behScore > 0.6 ? "bg-red-500" : "bg-emerald-500")} style={{ width: `${(activeUnit.behScore || 0) * 100}%` }} />
-                    </div>
-                  </div>
+          <Card className="flex flex-col border-white/10 shadow-2xl rounded-[24px] overflow-hidden bg-[#1E293B]/40 backdrop-blur-md shrink-0">
+            <CardHeader className="px-8 py-5 border-b border-white/5 bg-white/5">
+              <CardTitle className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                <ShieldAlert size={16} className="text-[#0066CC] drop-shadow-[0_0_8px_rgba(0,102,204,0.4)]" />
+                Tri-Shield Final Verdict & Explainability
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-8">
+              <div className="flex items-center justify-between gap-12">
+                {/* Left: Overall Risk Gauge */}
+                <div className="flex flex-col items-center shrink-0">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Overall Risk</span>
+                  <GaugeChart score={(activeUnit.ensembleScore || 0) * 10} decision={activeUnit.decision} />
                 </div>
 
-                <div className="col-span-2 border-l border-slate-100 pl-8 flex flex-col justify-center">
-                  {activeUnit.reasons && activeUnit.reasons.length > 0 && (
-                    <div className="space-y-3">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Model Triggers:</span>
-                      <div className="flex flex-wrap gap-2">
-                        {activeUnit.reasons.map((r, i) => (
-                          <Badge key={i} variant="outline" className="text-xs font-bold py-2 px-3 bg-slate-50 border-slate-200 text-slate-600">
-                            {r}
-                          </Badge>
-                        ))}
+                {/* Right: Detailed Model Shields (Horizontal Layout) */}
+                <div className="flex-1 flex flex-col gap-6">
+                  <div className="grid grid-cols-1 gap-4">
+                    {[
+                      { label: 'Shield 1: LGBM', score: activeUnit.lgbScore, threshold: 0.6, colorClass: (s) => s > 0.6 ? "bg-red-500" : "bg-emerald-500", textClass: (s) => s > 0.6 ? "text-red-400" : "text-emerald-400" },
+                      { label: 'Shield 2: I-Forest', score: activeUnit.isoScore, threshold: 0.5, colorClass: (s) => s > 0.5 ? "bg-amber-500" : "bg-emerald-500", textClass: (s) => s > 0.5 ? "text-amber-400" : "text-emerald-400" },
+                      { label: 'Shield 3: Physics', score: activeUnit.behScore, threshold: 0.6, colorClass: (s) => s > 0.6 ? "bg-red-500" : "bg-emerald-500", textClass: (s) => s > 0.6 ? "text-red-400" : "text-emerald-400" }
+                    ].map((shield, idx) => (
+                      <div key={idx} className="flex items-center gap-4 bg-white/5 p-3 rounded-2xl border border-white/5">
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest w-32 shrink-0">{shield.label}</span>
+                        <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                          <div className={clsx("h-full rounded-full transition-all", shield.colorClass(shield.score))} style={{ width: `${(shield.score || 0) * 100}%` }} />
+                        </div>
+                        <span className={clsx("text-xs font-black font-mono w-12 text-right", shield.textClass(shield.score))}>
+                          {((shield.score || 0) * 100).toFixed(0)}%
+                        </span>
                       </div>
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
+              </div>
+              
+              {/* Triggers (now below the horizontal row) */}
+              {activeUnit.reasons && activeUnit.reasons.length > 0 && (
+                <div className="mt-8 w-full bg-white/5 rounded-2xl p-4 border border-white/5">
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {activeUnit.reasons.map((r, i) => (
+                      <Badge key={i} variant="outline" className="text-[9px] font-black py-1 px-3 bg-[#0066CC]/10 border-[#0066CC]/30 text-[#0066CC]">
+                        {r}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-             </CardContent>
+            </CardContent>
           </Card>
 
           {/* ROW E: ROM Digital Twin Insights */}
@@ -763,16 +776,16 @@ export default function UnitInvestigation({ engine }) {
                 contribution: stageAttr[primaryStage] ? `${(stageAttr[primaryStage] * 100).toFixed(0)}%` : '—',
                 deviation: `${formatParam(primaryParam)} deviated from nominal`,
                 effect: primaryStage === 'Die Bond' ? 'Bond force deviation → epoxy void / delamination risk at die-mold interface' :
-                        primaryStage === 'Wire Bond' ? 'Ultrasonic power/capillary wear → weak wire bonds, potential lift-off' :
-                        primaryStage === 'Mold' ? 'CTE mismatch → thermal stress at die-mold interface, void formation' :
-                        primaryStage === 'Ball Attach' ? 'Thermal overshoot → solder joint fatigue, intermetallic fracture' :
+                  primaryStage === 'Wire Bond' ? 'Ultrasonic power/capillary wear → weak wire bonds, potential lift-off' :
+                    primaryStage === 'Mold' ? 'CTE mismatch → thermal stress at die-mold interface, void formation' :
+                      primaryStage === 'Ball Attach' ? 'Thermal overshoot → solder joint fatigue, intermetallic fracture' :
                         'Blade wear × vibration → edge chipping, kerf damage',
                 location: primaryStage === 'Die Bond' ? 'Die center + corners' :
-                          primaryStage === 'Wire Bond' ? 'Bond pad ring periphery' :
-                          primaryStage === 'Mold' ? 'Center + void concentrators' :
-                          primaryStage === 'Ball Attach' ? 'BGA ball grid (bottom)' :
-                          'Package perimeter edges',
-                color: 'text-red-600', bg: 'bg-red-50', borderColor: 'border-red-200',
+                  primaryStage === 'Wire Bond' ? 'Bond pad ring periphery' :
+                    primaryStage === 'Mold' ? 'Center + void concentrators' :
+                      primaryStage === 'Ball Attach' ? 'BGA ball grid (bottom)' :
+                        'Package perimeter edges',
+                color: 'text-red-900', bg: 'bg-red-100', border: 'border-red-300',
               },
               {
                 title: Object.keys(stageAttr)[1] || 'Wire Bond',
@@ -780,7 +793,7 @@ export default function UnitInvestigation({ engine }) {
                 deviation: 'Secondary stress contributor',
                 effect: 'Compound interaction with primary stage increases cumulative failure probability',
                 location: 'Distributed across affected regions',
-                color: 'text-amber-600', bg: 'bg-amber-50', borderColor: 'border-amber-200',
+                color: 'text-amber-900', bg: 'bg-amber-100', border: 'border-amber-300',
               },
               {
                 title: 'Cumulative RRS',
@@ -788,89 +801,102 @@ export default function UnitInvestigation({ engine }) {
                 deviation: `Final CRI: ${finalCRI.toFixed(4)}`,
                 effect: isCritical ? 'Tolerance stack exceeds critical threshold — unit at high risk of burn-in failure' : 'Cumulative stress within acceptable envelope',
                 location: 'Global — all stages contribute',
-                color: isCritical ? 'text-red-600' : 'text-emerald-600',
-                bg: isCritical ? 'bg-red-50' : 'bg-emerald-50',
-                borderColor: isCritical ? 'border-red-200' : 'border-emerald-200',
+                color: isCritical ? 'text-red-400' : 'text-emerald-400',
+                bg: 'bg-slate-900/60', 
+                border: isCritical ? 'border-red-500/30' : 'border-emerald-500/30',
               },
             ]
 
             return (
-              <Card className="flex flex-col border-slate-200 shadow-sm rounded-[24px] overflow-hidden bg-white shrink-0">
-                <CardHeader className="px-8 py-5 border-b border-slate-100 bg-slate-50/50">
+              <Card className="flex flex-col border-white/10 shadow-2xl rounded-[24px] overflow-hidden bg-[#1E293B]/40 backdrop-blur-md shrink-0">
+                <CardHeader className="px-8 py-5 border-b border-white/5 bg-white/5">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                      <Zap size={16} className="text-blue-500" />
+                    <CardTitle className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                      <Zap size={16} className="text-[#0066CC] drop-shadow-[0_0_8px_rgba(0,102,204,0.4)]" />
                       ROM Digital Twin — Stress & Root Cause Analysis
                     </CardTitle>
                     <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="text-[9px] font-black bg-blue-50 border-blue-200 text-blue-600">
+                      <Badge variant="outline" className="text-[9px] font-black bg-[#0066CC]/10 border-[#0066CC]/30 text-[#0066CC]">
                         POD Modes: {romResult.rom_metadata.pod_modes_used}
                       </Badge>
-                      <Badge variant="outline" className="text-[9px] font-black bg-white border-slate-200 text-slate-500">
+                      <Badge variant="outline" className="text-[9px] font-black bg-white/5 border-white/10 text-slate-400 font-mono">
                         {romResult.rom_metadata.reconstruction_time_ms.toFixed(1)}ms
                       </Badge>
-                      <Badge variant="outline" className={clsx("text-[9px] font-black", isCritical ? "bg-red-50 border-red-200 text-red-600" : "bg-emerald-50 border-emerald-200 text-emerald-600")}>
+                      <Badge variant="outline" className={clsx("text-[9px] font-black", isCritical ? "bg-red-500/20 border-red-500/30 text-red-400" : "bg-emerald-500/20 border-emerald-200 text-emerald-400")}>
                         {isCritical ? '⚠ CRITICAL' : '✓ HEALTHY'}
                       </Badge>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-8 space-y-8">
-                  
+
                   {/* Row 1: Heatmap + CRI Lifecycle + Root Cause */}
                   <div className="grid grid-cols-3 gap-6">
-                    
+
                     {/* 2D Stress Distribution Heatmap */}
-                    <div className="flex flex-col items-center">
-                      <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 self-start">
-                        2D Stress Distribution (Von Mises)
-                      </h4>
+                    <div className="flex flex-col items-center bg-slate-900/40 backdrop-blur-md rounded-2xl border border-white/5 p-5 h-[320px] justify-between">
+                      <div className="w-full flex items-center gap-2 mb-2">
+                        <Activity size={14} className="text-[#00A3AD]" />
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          2D Stress Distribution
+                        </h4>
+                      </div>
                       <StressHeatmapCanvas stressGrid={stressGrid} maxStress={maxStress} />
                       <div className="mt-3 w-full space-y-2">
-                        <div className="flex items-center justify-center gap-2 text-[9px] uppercase text-slate-400 font-bold">
+                        <div className="flex items-center justify-center gap-2 text-[8px] uppercase text-slate-500 font-black tracking-widest">
                           <span>Low</span>
-                          <div className="w-24 h-2 bg-gradient-to-r from-blue-600 to-red-600 rounded-full opacity-70" />
+                          <div className="w-24 h-1.5 rounded-full opacity-80" style={{ background: 'linear-gradient(to right, hsl(240,100%,50%), hsl(180,100%,50%), hsl(120,100%,50%), hsl(60,100%,50%), hsl(0,100%,50%))' }} />
                           <span>High</span>
                         </div>
-                        <div className="flex justify-between text-[10px] font-bold text-slate-500 px-2">
-                          <span>Max: <span className={clsx("font-black", maxStress > 150 ? "text-red-500" : "text-slate-700")}>{maxStress.toFixed(1)} MPa</span></span>
-                          <span>Mean: <span className="font-black text-slate-700">{meanStress.toFixed(1)} MPa</span></span>
+                        <div className="flex justify-between text-[10px] font-black text-slate-400 px-2 font-mono">
+                          <span>Max: <span className={clsx(maxStress > 150 ? "text-red-400" : "text-white")}>{maxStress.toFixed(1)} MPa</span></span>
+                          <span>Mean: <span className="text-white">{meanStress.toFixed(1)} MPa</span></span>
                         </div>
                       </div>
                     </div>
 
                     {/* CRI Lifecycle Trajectory */}
-                    <div className="flex flex-col">
-                      <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">
-                        CRI Lifecycle Trajectory
-                      </h4>
-                      <div className="flex-1 min-h-[260px]">
+                    <div className="flex flex-col bg-slate-900/40 backdrop-blur-md rounded-2xl border border-white/5 p-5 h-[320px]">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Zap size={14} className="text-[#00A3AD]" />
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          CRI Lifecycle Trajectory
+                        </h4>
+                      </div>
+                      <div className="flex-1 min-h-0">
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={criData} margin={{ top: 10, right: 10, left: -20, bottom: 50 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                             <XAxis
-                              dataKey="stage" stroke="#94a3b8"
-                              tick={{ fontSize: 9, fill: '#64748b', fontWeight: 'bold' }}
+                              dataKey="stage" stroke="#475569"
+                              tick={{ fontSize: 8, fill: "#94a3b8", fontWeight: 'black' }}
                               angle={-35} textAnchor="end" height={60}
                             />
-                            <YAxis domain={[0, 1.0]} stroke="#94a3b8" tick={{ fontSize: 10, fill: '#64748b' }} />
+                            <YAxis domain={[0, 1.0]} stroke="#475569" tick={{ fontSize: 9, fill: "#94a3b8", fontMono: true }} />
                             <Tooltip
-                              contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                              contentStyle={{
+                                backgroundColor: '#111827',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '12px',
+                                color: '#fff'
+                              }}
+                              itemStyle={{ color: '#fff' }}
                               formatter={(val) => [val.toFixed(4), 'CRI']}
                             />
                             <ReferenceLine y={0.6} stroke="#ef4444" strokeDasharray="5 5" strokeWidth={2}
-                              label={{ position: 'top', value: 'Critical', fill: '#ef4444', fontSize: 9, fontWeight: 'bold' }}
+                              label={{ position: 'top', value: 'CRITICAL', fill: '#ef4444', fontSize: 8, fontWeight: 'black' }}
                             />
                             <Line
                               type="monotone" dataKey="cri"
                               stroke={isCritical ? "#ef4444" : "#3b82f6"} strokeWidth={3}
+                              filter="drop-shadow(0 0 8px rgba(59,130,246,0.2))"
                               dot={(props) => {
                                 const { cx, cy, index } = props
                                 const isSpike = index === spikeIdx
                                 return (
                                   <circle
                                     key={index} cx={cx} cy={cy}
-                                    r={isSpike ? 6 : 4}
+                                    r={isSpike ? 5 : 3}
                                     fill={isCritical ? "#ef4444" : "#3b82f6"}
                                     stroke={isSpike ? "#fff" : "none"}
                                     strokeWidth={isSpike ? 2 : 0}
@@ -882,75 +908,85 @@ export default function UnitInvestigation({ engine }) {
                         </ResponsiveContainer>
                       </div>
                       {spikeIdx >= 0 && (
-                        <div className="mt-2 text-[10px] font-bold text-slate-500 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
-                          ⚡ Spike at <span className="font-black text-slate-800">{stageNames[spikeIdx]}</span> (+{(rrsDeltas[spikeIdx]).toFixed(4)})
+                        <div className="mt-2 text-[9px] font-black text-slate-500 bg-white/5 rounded-lg px-2 py-1 border border-white/5 uppercase tracking-tighter">
+                          ⚡ Spike: <span className="text-white">{stageNames[spikeIdx]}</span> (+{(rrsDeltas[spikeIdx]).toFixed(3)})
                         </div>
                       )}
                     </div>
 
                     {/* Root Cause Attribution */}
-                    <div className="flex flex-col">
-                      <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">
-                        Root Cause Attribution (by Stage)
-                      </h4>
-                      <div className="flex-1 min-h-[260px]">
+                    <div className="flex flex-col bg-slate-900/40 backdrop-blur-md rounded-2xl border border-white/5 p-5 h-[320px]">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Target size={14} className="text-[#00A3AD]" />
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          Root Cause Attribution
+                        </h4>
+                      </div>
+                      <div className="flex-1 min-h-0">
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart layout="vertical" data={stageAttrData} margin={{ top: 10, right: 40, left: 10, bottom: 10 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                          <BarChart layout="vertical" data={stageAttrData} margin={{ top: 0, right: 40, left: 10, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
                             <XAxis type="number" hide />
                             <YAxis
-                              type="category" dataKey="name" stroke="#94a3b8"
-                              tick={{ fontSize: 10, fill: '#1e293b', fontWeight: 'bold' }} width={100}
+                              type="category" dataKey="name" stroke="#475569"
+                              tick={{ fontSize: 9, fill: "#cbd5e1", fontWeight: 'black' }} width={90}
                             />
                             <Tooltip
-                              cursor={{ fill: '#f8fafc' }}
-                              contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                              cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                              contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
+                              itemStyle={{ color: '#fff' }}
                               formatter={(val) => [`${val}%`, 'Attribution']}
                             />
-                            <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={20}>
+                            <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={18}>
                               {stageAttrData.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={entry.color} />
                               ))}
-                              <LabelList dataKey="value" position="right" fill="#1e293b" formatter={(v) => `${v}%`} fontSize={11} fontWeight="bold" />
+                              <LabelList dataKey="value" position="right" fill="#fff" formatter={(v) => `${v}%`} fontSize={10} fontWeight="black" fontMono />
                             </Bar>
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
-                      <div className="mt-2 text-[10px] font-bold text-slate-500 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
-                        🎯 Primary: <span className="font-black text-slate-800">{primaryStage}</span> → <span className="font-black" style={{ color: ROM_STAGE_COLORS_MAP[primaryStage] }}>{formatParam(primaryParam)}</span>
+                      <div className="mt-2 text-[9px] font-black text-slate-500 bg-white/5 rounded-lg px-2 py-1 border border-white/5 uppercase tracking-tighter">
+                        🎯 Primary: <span className="text-white">{primaryStage}</span> → <span style={{ color: ROM_STAGE_COLORS_MAP[primaryStage] }}>{formatParam(primaryParam)}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Row 2: Physics-Based Diagnostic Explanations */}
                   <div>
-                    <div className="flex items-center gap-2 mb-4">
-                      <BookOpen size={14} className="text-blue-500" />
-                      <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Physics-Based Diagnostic Explanations</h4>
+                    <div className="flex items-center gap-2 mb-6">
+                      <BookOpen size={16} className="text-[#00A3AD]" />
+                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Physics-Based Diagnostic Explanations</h4>
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-3 gap-6">
                       {physicsExplanations.map((item) => (
-                        <div key={item.title} className={clsx("p-5 rounded-2xl border shadow-sm", item.bg, item.borderColor)}>
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">{item.title}</span>
-                            <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-500">
+                        <div key={item.title} className={clsx(
+                          "p-6 rounded-3xl border backdrop-blur-md transition-all relative overflow-hidden group shadow-2xl",
+                          item.bg, item.border
+                        )}>
+                          <div className="flex items-center justify-between mb-5 relative z-10">
+                            <span className="text-xs font-black text-white uppercase tracking-widest">{item.title}</span>
+                            <span className={clsx(
+                              "text-[9px] font-black px-3 py-1 rounded-full text-white shadow-lg",
+                              item.title === 'Cumulative RRS' ? "bg-emerald-500" : "bg-[#0066CC]"
+                            )}>
                               {item.contribution} Contrib.
                             </span>
                           </div>
-                          <div className="space-y-3">
+                          <div className="space-y-4 relative z-10">
                             <div>
-                              <p className="text-[9px] uppercase tracking-widest text-slate-400 font-black mb-0.5">Deviation</p>
-                              <p className={clsx("text-xs font-black", item.color)}>{item.deviation}</p>
+                              <p className="text-[9px] uppercase tracking-[0.2em] text-red-400 font-black mb-1.5">Deviation Identified</p>
+                              <p className={clsx("text-xs font-black font-mono leading-relaxed", item.color)}>{item.deviation}</p>
                             </div>
                             <div>
-                              <p className="text-[9px] uppercase tracking-widest text-slate-400 font-black mb-0.5">Physical Effect</p>
-                              <p className="text-xs text-slate-600 leading-relaxed font-bold">{item.effect}</p>
+                              <p className="text-[9px] uppercase tracking-[0.2em] text-slate-500 font-black mb-1.5">Physical Effect</p>
+                              <p className="text-xs text-[#E2E8F0] leading-relaxed font-bold">{item.effect}</p>
                             </div>
                             <div>
-                              <p className="text-[9px] uppercase tracking-widest text-slate-400 font-black mb-0.5">Impact Region</p>
-                              <div className="flex items-center gap-1.5 mt-1">
-                                <div className="w-2 h-2 rounded-full bg-blue-500/40" />
-                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-tight italic">{item.location}</p>
+                              <p className="text-[9px] uppercase tracking-[0.2em] text-slate-500 font-black mb-1.5">Impact Region</p>
+                              <div className="flex items-center gap-2">
+                                <div className={clsx("w-2 h-2 rounded-full", item.color.replace('text-', 'bg-'))} />
+                                <p className={clsx("text-[10px] font-black italic uppercase tracking-tighter", item.color)}>{item.location}</p>
                               </div>
                             </div>
                           </div>
@@ -958,12 +994,11 @@ export default function UnitInvestigation({ engine }) {
                       ))}
                     </div>
                   </div>
-
                 </CardContent>
               </Card>
             )
           })()}
-          
+
         </div>
       </div>
     </div>

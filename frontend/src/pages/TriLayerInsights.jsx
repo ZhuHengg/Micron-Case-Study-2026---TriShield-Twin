@@ -107,100 +107,159 @@ export default function TriLayerInsights({ engine }) {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-4 font-sans pb-8">
+    <div className="max-w-[1400px] mx-auto space-y-6 font-sans pb-12 text-slate-200">
+      <svg width="0" height="0">
+        <defs>
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+      </svg>
+
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-black tracking-wider text-slate-800 uppercase">Model Insights</h1>
-          <p className="text-xs text-slate-400 tracking-widest uppercase mt-1">Tri-Shield Ensemble · LightGBM + IsoForest + Physics Rules</p>
+          <h1 className="text-2xl font-black tracking-[0.2em] text-white uppercase drop-shadow-sm">Model Insights</h1>
+          <p className="text-[10px] text-slate-400 tracking-[0.3em] uppercase mt-2">Tri-Shield Ensemble · LightGBM + IsoForest + Physics Rules</p>
         </div>
-        <div className="flex gap-2">
-          {setIsRunning && <button onClick={() => setIsRunning(!isRunning)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-amber-200 text-amber-600 bg-amber-50 hover:bg-amber-100">{isRunning ? <Pause size={12}/> : <Play size={12}/>}{isRunning ? 'Pause' : 'Resume'}</button>}
-          {triggerExcursionBurst && <button onClick={triggerExcursionBurst} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-red-200 text-red-600 bg-red-50 hover:bg-red-100"><Zap size={12}/>Excursion Burst</button>}
+        <div className="flex gap-3">
+          {setIsRunning && (
+            <button 
+              onClick={() => setIsRunning(!isRunning)} 
+              className={clsx(
+                "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                isRunning 
+                  ? "bg-amber-500/10 border border-amber-500/30 text-amber-500 hover:bg-amber-500/20" 
+                  : "bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/20"
+              )}
+            >
+              {isRunning ? <Pause size={14}/> : <Play size={14}/>}
+              {isRunning ? 'Pause Engine' : 'Resume Engine'}
+            </button>
+          )}
+          {triggerExcursionBurst && (
+            <button onClick={triggerExcursionBurst} className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-red-500/10 border border-red-500/30 text-red-500 hover:bg-red-500/20 transition-all">
+              <Zap size={14}/>
+              Excursion Burst
+            </button>
+          )}
         </div>
       </div>
 
-      {/* TOP STATS */}
-      <div className="grid grid-cols-4 gap-3">
+      {/* PRIMARY GROUND TRUTH METRICS (Glassmorphism Redesign) */}
+      <div className="grid grid-cols-4 gap-4">
         {[
-          { label: 'Shield 1 Avg Score', value: (topStats.lgbAvg * 100).toFixed(1) + '%', sub: 'LightGBM defect probability', color: '#2563eb' },
-          { label: 'Shield 2 Anomaly Rate', value: (topStats.isoRate * 100).toFixed(1) + '%', sub: '% units where ISO > 0.5', color: '#7c3aed' },
-          { label: 'Shield 3 Rule Hit Rate', value: (topStats.behRate * 100).toFixed(1) + '%', sub: '% where physics rules fired', color: '#d97706' },
-          { label: 'Model Disagreement', value: (topStats.disRate * 100).toFixed(1) + '%', sub: '% where |S1 - S2| > 0.3', color: '#ef4444' },
-        ].map((s, i) => (
-          <div key={i} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4" style={{ borderLeftWidth: 4, borderLeftColor: s.color }}>
-            <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">{s.label}</p>
-            <p className="text-2xl font-black mt-1" style={{ color: s.color }}>{s.value}</p>
-            <p className="text-[9px] text-slate-400 mt-1 tracking-wider font-bold">{s.sub}</p>
-          </div>
-        ))}
+          { label: 'Precision', value: sim.p, delta: '+1.2%', desc: `${sim.TP} TP / ${sim.TP + sim.FP} Blocked`, color: '#10b981' },
+          { label: 'Recall', value: sim.r, delta: '+0.5%', desc: `${sim.TP} caught / ${sim.TP + sim.FN} total defects`, color: '#f59e0b' },
+          { label: 'F1 Score', value: sim.f, delta: '-0.2%', desc: 'Harmonic mean of P & R', color: '#2563eb' },
+          { label: 'FP Rate', value: sim.fp, delta: '-0.8%', desc: `${sim.FP} false positives`, color: '#ef4444', reverse: true },
+        ].map((m, i) => {
+          const pct = (m.value * 100)
+          return (
+            <div key={i} className="bg-slate-900/40 backdrop-blur-md rounded-[24px] border transition-all p-6 group hover:bg-slate-900/60" style={{ borderColor: m.color + '30' }}>
+              <div className="flex justify-between items-start mb-4">
+                <span className="text-[10px] text-slate-400 uppercase tracking-[0.2em] font-black">{m.label}</span>
+                <div className="flex items-center gap-1 text-[10px] font-black" style={{ color: m.color }}>
+                  <span>{m.delta}</span>
+                  <Activity size={10} className={m.delta.startsWith('+') ? "animate-pulse" : ""} />
+                </div>
+              </div>
+              <div className="text-4xl font-black font-mono mb-2 text-white">
+                {m.label === 'F1 Score' ? m.value.toFixed(3) : `${pct.toFixed(1)}%`}
+              </div>
+              <div className="h-1.5 bg-white/5 rounded-full overflow-hidden mb-4 border border-white/5">
+                <div className="h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(255,255,255,0.2)]" style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: m.color }} />
+              </div>
+              <p className="text-[10px] text-slate-500 font-bold tracking-tight">{m.desc}</p>
+            </div>
+          )
+        })}
       </div>
 
       <div className="grid grid-cols-12 gap-4 items-start">
         {/* LEFT: Ensemble Controls */}
         <div className="col-span-3 space-y-4">
-          <Panel title="Ensemble Controls">
-            <div className="space-y-5 pt-2">
-              <div>
-                <h3 className="text-[10px] text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 pb-1 font-bold">Live Weight Tuner</h3>
+          <Panel title="Ensemble Controls" className="bg-slate-900/40 border-white/10 text-white">
+            <div className="space-y-6 pt-2">
+              <div className="space-y-4">
+                <h3 className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mb-4 border-b border-white/5 pb-2 font-black text-center">Live Weight Tuner</h3>
                 {[
-                  { key: 'lgb', label: 'Shield 1 (LGB)', color: '#2563eb' },
-                  { key: 'iso', label: 'Shield 2 (ISO)', color: '#7c3aed' },
-                  { key: 'beh', label: 'Shield 3 (Physics)', color: '#d97706' },
+                  { key: 'lgb', label: 'Shield 1 (LGB)', color: '#2563eb', shadow: 'rgba(37,99,235,0.4)' },
+                  { key: 'iso', label: 'Shield 2 (ISO)', color: '#7c3aed', shadow: 'rgba(124,58,237,0.4)' },
+                  { key: 'beh', label: 'Shield 3 (Physics)', color: '#d97706', shadow: 'rgba(217,119,6,0.4)' },
                 ].map(s => (
-                  <div key={s.key} className="space-y-1 mb-3">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-black uppercase tracking-widest" style={{ color: s.color }}>{s.label}</span>
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-black" style={{ color: s.color, backgroundColor: s.color + '15' }}>{weights[s.key].toFixed(2)}</span>
+                  <div key={s.key} className="space-y-2">
+                    <div className="flex justify-between items-center text-[10px]">
+                      <span className="font-black uppercase tracking-widest text-slate-400">{s.label}</span>
+                      <span className="px-2 py-0.5 rounded-full font-mono font-black border border-white/10 bg-white/5" style={{ color: s.color }}>{weights[s.key].toFixed(2)}</span>
                     </div>
-                    <input type="range" min="0" max="100" value={weights[s.key] * 100} onChange={e => handleWeightChange(s.key, Number(e.target.value))} className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200" style={{ accentColor: s.color }} />
+                    <div className="relative h-6 flex items-center">
+                      <div className="absolute w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full transition-all" style={{ width: `${weights[s.key] * 100}%`, backgroundColor: s.color, boxShadow: `0 0 12px ${s.shadow}` }} />
+                      </div>
+                      <input 
+                        type="range" min="0" max="100" value={weights[s.key] * 100} 
+                        onChange={e => handleWeightChange(s.key, Number(e.target.value))} 
+                        className="absolute w-full h-1 bg-transparent appearance-none cursor-pointer z-10 accent-white"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
 
-              {/* Live counts */}
-              <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-2">
+              {/* Live counts (Glassmorphic Treatment) */}
+              <div className="bg-white/5 border border-white/10 p-4 rounded-2xl space-y-3 shadow-inner">
                 {[
                   { label: 'APPROVE', val: sim.approve, pct: sim.approvePct, color: '#10b981' },
                   { label: 'FLAG', val: sim.flag, pct: sim.flagPct, color: '#f59e0b' },
                   { label: 'BLOCK', val: sim.block, pct: sim.blockPct, color: '#ef4444' },
                 ].map(d => (
-                  <div key={d.label} className="flex justify-between items-center bg-white border border-slate-100 p-2 rounded-lg">
-                    <span className="text-[10px] tracking-wider font-bold" style={{ color: d.color }}>{d.label}</span>
-                    <div className="flex gap-2 items-center">
-                      <span className="font-black" style={{ color: d.color }}>{d.val}</span>
-                      <span className="text-[9px] w-10 text-right" style={{ color: d.color + '80' }}>({d.pct.toFixed(1)}%)</span>
+                  <div key={d.label} className="flex justify-between items-center bg-black/20 border border-white/5 p-2.5 rounded-xl transition-all hover:bg-black/40">
+                    <span className="text-[9px] tracking-[0.2em] font-black" style={{ color: d.color }}>{d.label}</span>
+                    <div className="flex gap-3 items-center">
+                      <span className="font-mono font-black text-xs text-white">{d.val}</span>
+                      <span className="text-[9px] w-10 text-right font-bold" style={{ color: d.color }}>{d.pct.toFixed(0)}%</span>
                     </div>
                   </div>
                 ))}
               </div>
 
               {/* Thresholds */}
-              <div className="pt-3 border-t border-slate-100">
-                <h3 className="text-[10px] text-slate-400 uppercase tracking-widest mb-3 font-bold">Decision Thresholds</h3>
+              <div className="pt-4 border-t border-white/5">
+                <h3 className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mb-4 font-black text-center">Decision Thresholds</h3>
                 {[
                   { key: 'approve', label: 'Approve', color: '#10b981' },
                   { key: 'block', label: 'Block', color: '#ef4444' },
                 ].map(t => (
-                  <div key={t.key} className="space-y-1 mb-3">
-                    <div className="flex justify-between text-xs"><span style={{ color: t.color }} className="tracking-wider font-bold">{t.label} Thresh</span><span style={{ color: t.color }} className="font-black">{thresholds[t.key]}</span></div>
-                    <input type="range" min="10" max="90" value={thresholds[t.key]} onChange={e => setThresholds(p => ({ ...p, [t.key]: Number(e.target.value) }))} className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200" style={{ accentColor: t.color }} />
+                  <div key={t.key} className="space-y-2 mb-4">
+                    <div className="flex justify-between text-[10px]">
+                      <span className="tracking-[0.2em] font-black uppercase text-slate-400">{t.label} Thresh</span>
+                      <span style={{ color: t.color }} className="font-mono font-black">{thresholds[t.key]}</span>
+                    </div>
+                    <div className="relative h-6 flex items-center">
+                      <div className="absolute w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full transition-all" style={{ width: `${thresholds[t.key]}%`, backgroundColor: t.color, boxShadow: `0 0 10px ${t.color}60` }} />
+                      </div>
+                      <input type="range" min="10" max="90" value={thresholds[t.key]} onChange={e => setThresholds(p => ({ ...p, [t.key]: Number(e.target.value) }))} className="absolute w-full h-1 bg-transparent appearance-none cursor-pointer z-10 accent-white" />
+                    </div>
                   </div>
                 ))}
               </div>
 
-              {/* Confusion Matrix */}
-              <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl grid grid-cols-2 gap-2">
-                <MetricBar label="Precision" value={sim.p} />
-                <MetricBar label="Recall" value={sim.r} />
-                <MetricBar label="FP Rate" value={sim.fp} reverse />
-                <MetricBar label="F1 Score" value={sim.f} />
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-center"><p className="text-[8px] text-emerald-500 uppercase tracking-wider font-bold">True Neg</p><p className="text-lg font-black text-emerald-600">{sim.TN}</p></div>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 text-center"><p className="text-[8px] text-amber-500 uppercase tracking-wider font-bold">False Pos</p><p className="text-lg font-black text-amber-600">{sim.FP}</p></div>
-                <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-center"><p className="text-[8px] text-red-500 uppercase tracking-wider font-bold">False Neg</p><p className="text-lg font-black text-red-600">{sim.FN}</p></div>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center"><p className="text-[8px] text-blue-500 uppercase tracking-wider font-bold">True Pos</p><p className="text-lg font-black text-blue-600">{sim.TP}</p></div>
+              {/* Centered Diagnostic Boxes (Glassmorphic) */}
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                {[
+                  { label: 'True Neg', val: sim.TN, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' },
+                  { label: 'False Pos', val: sim.FP, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30' },
+                  { label: 'False Neg', val: sim.FN, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/30' },
+                  { label: 'True Pos', val: sim.TP, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
+                ].map(box => (
+                  <div key={box.label} className={clsx("rounded-xl p-3 text-center border backdrop-blur-sm", box.bg, box.border)}>
+                    <p className="text-[8px] uppercase tracking-widest font-black text-slate-400 mb-1">{box.label}</p>
+                    <p className={clsx("text-xl font-black font-mono", box.color)}>{box.val}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </Panel>
@@ -209,32 +268,26 @@ export default function TriLayerInsights({ engine }) {
         {/* RIGHT: 4 Sections */}
         <div className="col-span-9 space-y-4">
           {/* 1: Model Agreement Matrix */}
-          <Panel title="Shield Agreement Matrix">
-            <div className="grid grid-cols-2 gap-4 mb-3">
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 flex flex-col items-center relative overflow-hidden">
-                <ShieldCheck className="absolute -left-2 -bottom-2 w-20 h-20 text-emerald-200" strokeWidth={1}/>
-                <p className="text-[11px] uppercase tracking-widest mb-1 text-emerald-600 font-black z-10">Both Agree Safe</p>
-                <p className="text-3xl font-black text-emerald-600 z-10">{matrix.bothSafe}</p>
-                <p className="text-[10px] mt-1 px-2 py-0.5 rounded bg-emerald-100 text-emerald-600 font-bold z-10">{matrix.pctBothSafe.toFixed(1)}%</p>
-              </div>
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex flex-col items-center">
-                <p className="text-[11px] uppercase tracking-widest mb-1 text-amber-600 font-black">⚠ ISO flags, LGB misses</p>
-                <p className="text-3xl font-black text-amber-600">{matrix.isoFlags}</p>
-                <p className="text-[10px] mt-1 px-2 py-0.5 rounded bg-amber-100 text-amber-600 font-bold">{matrix.pctIso.toFixed(1)}%</p>
-              </div>
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex flex-col items-center">
-                <p className="text-[11px] uppercase tracking-widest mb-1 text-amber-600 font-black">⚠ LGB flags, ISO misses</p>
-                <p className="text-3xl font-black text-amber-600">{matrix.lgbFlags}</p>
-                <p className="text-[10px] mt-1 px-2 py-0.5 rounded bg-amber-100 text-amber-600 font-bold">{matrix.pctLgb.toFixed(1)}%</p>
-              </div>
-              <div className="rounded-xl border border-red-200 bg-red-50 p-4 flex flex-col items-center">
-                <p className="text-[11px] uppercase tracking-widest mb-1 text-red-600 font-black">🚨 Both Agree Defective</p>
-                <p className="text-3xl font-black text-red-600">{matrix.bothDefect}</p>
-                <p className="text-[10px] mt-1 px-2 py-0.5 rounded bg-red-100 text-red-600 font-bold">{matrix.pctBothDefect.toFixed(1)}%</p>
-              </div>
+          <Panel title="Shield Agreement Matrix" className="bg-slate-900/40 border-white/10">
+            <div className="grid grid-cols-2 gap-4 mb-6 h-64">
+              {[
+                { title: 'Both Agree Safe', val: matrix.bothSafe, pct: matrix.pctBothSafe, color: 'text-emerald-500', bg: 'bg-emerald-500/5', border: 'border-emerald-500/20' },
+                { title: 'ISO flags, LGB misses', val: matrix.isoFlags, pct: matrix.pctIso, color: 'text-amber-500', bg: 'bg-amber-500/5', border: 'border-amber-500/20' },
+                { title: 'LGB flags, ISO misses', val: matrix.lgbFlags, pct: matrix.pctLgb, color: 'text-amber-500', bg: 'bg-amber-500/5', border: 'border-amber-500/20' },
+                { title: 'Both Agree Defective', val: matrix.bothDefect, pct: matrix.pctBothDefect, color: 'text-red-500', bg: 'bg-red-500/5', border: 'border-red-500/20' },
+              ].map((q, idx) => (
+                <div key={idx} className={clsx("rounded-2xl border p-6 flex flex-col items-center justify-center relative overflow-hidden transition-all hover:scale-[1.02]", q.bg, q.border)}>
+                  <ShieldCheck className="absolute -left-4 -bottom-4 w-24 h-24 text-white opacity-[0.03] rotate-12" strokeWidth={1}/>
+                  <p className="text-[10px] uppercase tracking-[0.2em] mb-2 text-slate-400 font-black z-10 text-center">{q.title}</p>
+                  <p className={clsx("text-4xl font-black z-10 font-mono", q.color)}>{q.val}</p>
+                  <p className={clsx("text-[10px] mt-2 px-3 py-1 rounded-full font-black z-10 border", q.border, q.color)}>{q.pct.toFixed(1)}%</p>
+                </div>
+              ))}
             </div>
-            <div className="text-center pt-2">
-              <span className="text-xs uppercase tracking-widest text-amber-600 font-black px-4 py-1.5 rounded-full border border-amber-200 bg-amber-50">{matrix.disagree} units need review (shields disagree)</span>
+            <div className="text-center">
+              <span className="text-[10px] uppercase tracking-[0.3em] text-amber-500 font-black px-6 py-2.5 rounded-full border border-amber-500/30 bg-amber-500/10 backdrop-blur-sm shadow-lg shadow-amber-500/5">
+                {matrix.disagree} units need review (Shield Disagreement Detected)
+              </span>
             </div>
           </Panel>
 
@@ -305,68 +358,35 @@ export default function TriLayerInsights({ engine }) {
         </div>
       </div>
 
-      {/* CLASSIFICATION METRICS */}
-      <div className="grid grid-cols-4 gap-3">
-        {[
-          { label: 'Precision', value: sim.p, desc: `${sim.TP} TP / ${sim.TP + sim.FP} Blocked`, color: '#10b981' },
-          { label: 'Recall', value: sim.r, desc: `${sim.TP} caught / ${sim.TP + sim.FN} total defects`, color: '#f59e0b' },
-          { label: 'F1 Score', value: sim.f, desc: 'Harmonic mean of P & R', color: '#2563eb' },
-          { label: 'FP Rate', value: sim.fp, desc: `${sim.FP} false positives`, color: '#ef4444', reverse: true },
-        ].map((m, i) => {
-          const pct = (m.value * 100)
-          const status = m.reverse 
-            ? (pct <= 5 ? 'excellent' : pct <= 15 ? 'acceptable' : 'critical')
-            : (pct >= 80 ? 'excellent' : pct >= 50 ? 'acceptable' : 'critical')
-          const statusColor = status === 'excellent' ? '#10b981' : status === 'acceptable' ? '#f59e0b' : '#ef4444'
-          return (
-            <div key={i} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 relative overflow-hidden">
-              <div className="flex justify-between items-start mb-3">
-                <span className="text-[10px] text-slate-400 uppercase tracking-widest font-black">{m.label}</span>
-              </div>
-              <div className="text-4xl font-black font-sans mb-1" style={{ color: m.color }}>
-                {m.label === 'F1 Score' ? m.value.toFixed(3) : `${pct.toFixed(1)}%`}
-              </div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ color: statusColor, backgroundColor: statusColor + '15' }}>
-                  {status}
-                </span>
-              </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-2">
-                <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: m.color }} />
-              </div>
-              <p className="text-[9px] text-slate-400 font-bold">{m.desc}</p>
-            </div>
-          )
-        })}
-      </div>
-
       {/* Reclassification banner */}
-      <div className="text-center">
-        <span className="text-xs uppercase tracking-widest font-black text-slate-500">
-          {reclassified.toApprove + reclassified.toBlock} reclassified · 
-          <span className="text-emerald-500"> {reclassified.toApprove} → Approve</span> · 
-          <span className="text-red-500"> {reclassified.toBlock} → Block</span>
+      <div className="text-center py-4 border-t border-white/5">
+        <span className="text-[10px] uppercase tracking-[0.4em] font-black text-slate-500">
+          Ensemble Reclassification Logic: 
+          <span className="text-white ml-2">{reclassified.toApprove + reclassified.toBlock} Units Re-Evaluated</span> · 
+          <span className="text-emerald-500"> {reclassified.toApprove} → Auto-Approve</span> · 
+          <span className="text-red-500"> {reclassified.toBlock} → Auto-Block</span>
         </span>
       </div>
 
       {/* THRESHOLD VS METRICS CHART */}
-      <Panel title="Threshold vs Metrics — How each metric changes across thresholds 0–100">
-        <div className="w-full h-[340px] relative">
-          <svg viewBox="0 0 800 300" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+      {/* THRESHOLD VS METRICS CHART (Neon Redesign) */}
+      <Panel title="Ensemble Sensitivity Profile — Precision/Recall Tradeoff Curves" className="bg-slate-900/40 border-white/10">
+        <div className="w-full h-[400px] relative pt-8">
+          <svg viewBox="0 0 800 300" className="w-full h-full bg-transparent" preserveAspectRatio="xMidYMid meet">
             {/* Grid lines */}
             {[0, 0.2, 0.4, 0.6, 0.8, 1.0].map(v => (
               <g key={v}>
-                <line x1="60" y1={260 - v * 240} x2="780" y2={260 - v * 240} stroke="#e2e8f0" strokeWidth="1" />
-                <text x="50" y={264 - v * 240} textAnchor="end" className="text-[10px]" fill="#94a3b8" fontSize="10">{v.toFixed(1)}</text>
+                <line x1="60" y1={260 - v * 240} x2="780" y2={260 - v * 240} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                <text x="50" y={264 - v * 240} textAnchor="end" className="text-[9px] font-mono" fill="#475569" fontSize="10">{v.toFixed(1)}</text>
               </g>
             ))}
             {/* X-axis labels */}
-            {[0, 12, 24, 36, 48, 60, 72, 84, 96].map(v => (
-              <text key={v} x={60 + (v / 100) * 720} y="280" textAnchor="middle" fill="#94a3b8" fontSize="10">{v}</text>
+            {[0, 20, 40, 60, 80, 100].map(v => (
+              <text key={v} x={60 + (v / 100) * 720} y="285" textAnchor="middle" fill="#475569" fontSize="10" className="font-mono">{v}%</text>
             ))}
-            <text x="420" y="298" textAnchor="middle" fill="#64748b" fontSize="11" fontWeight="bold">THRESHOLD</text>
+            <text x="420" y="305" textAnchor="middle" fill="#475569" fontSize="9" fontWeight="black" className="tracking-[0.5em] uppercase">Threshold Percentage</text>
 
-            {/* Metric lines */}
+            {/* Metric lines with Glow */}
             {[
               { key: 'precision', color: '#10b981', label: 'Precision' },
               { key: 'recall', color: '#f59e0b', label: 'Recall' },
@@ -378,28 +398,34 @@ export default function TriLayerInsights({ engine }) {
                 const y = 260 - pt[metric.key] * 240
                 return `${i === 0 ? 'M' : 'L'} ${x} ${y}`
               }).join(' ')
-              return <path key={metric.key} d={pathData} fill="none" stroke={metric.color} strokeWidth="2.5" strokeLinejoin="round" />
+              return <path key={metric.key} d={pathData} fill="none" stroke={metric.color} strokeWidth="3" strokeLinejoin="round" filter="url(#glow)" className="transition-all duration-500 opacity-80 hover:opacity-100" />
             })}
 
-            {/* Threshold markers */}
-            <line x1={60 + (thresholds.approve / 100) * 720} y1="20" x2={60 + (thresholds.approve / 100) * 720} y2="260" stroke="#f59e0b" strokeWidth="2" strokeDasharray="6 3" />
-            <rect x={60 + (thresholds.approve / 100) * 720 - 32} y="252" width="64" height="18" rx="4" fill="#f59e0b" />
-            <text x={60 + (thresholds.approve / 100) * 720} y="264" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">Approve T={thresholds.approve}</text>
+            {/* Decision Markers (Pinned Tags Redesign) */}
+            <g>
+              <line x1={60 + (thresholds.approve / 100) * 720} y1="20" x2={60 + (thresholds.approve / 100) * 720} y2="260" stroke="#f59e0b" strokeWidth="2" strokeDasharray="4 4" />
+              <path d={`M ${60 + (thresholds.approve / 100) * 720} 260 L ${60 + (thresholds.approve / 100) * 720 - 40} 290 L ${60 + (thresholds.approve / 100) * 720 + 40} 290 Z`} fill="#f59e0b" opacity="0.1" />
+              <rect x={60 + (thresholds.approve / 100) * 720 - 35} y="235" width="70" height="20" rx="4" fill="#f59e0b" />
+              <text x={60 + (thresholds.approve / 100) * 720} y="248" textAnchor="middle" fill="white" fontSize="9" fontWeight="black" className="uppercase tracking-tighter">APPROVE: {thresholds.approve}</text>
+            </g>
 
-            <line x1={60 + (thresholds.block / 100) * 720} y1="20" x2={60 + (thresholds.block / 100) * 720} y2="260" stroke="#ef4444" strokeWidth="2" strokeDasharray="6 3" />
-            <rect x={60 + (thresholds.block / 100) * 720 - 28} y="252" width="56" height="18" rx="4" fill="#ef4444" />
-            <text x={60 + (thresholds.block / 100) * 720} y="264" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">Block T={thresholds.block}</text>
+            <g>
+              <line x1={60 + (thresholds.block / 100) * 720} y1="20" x2={60 + (thresholds.block / 100) * 720} y2="260" stroke="#ef4444" strokeWidth="2" strokeDasharray="4 4" />
+              <path d={`M ${60 + (thresholds.block / 100) * 720} 260 L ${60 + (thresholds.block / 100) * 720 - 40} 290 L ${60 + (thresholds.block / 100) * 720 + 40} 290 Z`} fill="#ef4444" opacity="0.1" />
+              <rect x={60 + (thresholds.block / 100) * 720 - 30} y="235" width="60" height="20" rx="4" fill="#ef4444" />
+              <text x={60 + (thresholds.block / 100) * 720} y="248" textAnchor="middle" fill="white" fontSize="9" fontWeight="black" className="uppercase tracking-tighter">BLOCK: {thresholds.block}</text>
+            </g>
 
             {/* Legend */}
             {[
-              { label: 'Precision', color: '#10b981', x: 540 },
-              { label: 'Recall', color: '#f59e0b', x: 610 },
-              { label: 'F1', color: '#2563eb', x: 670 },
-              { label: 'FP Rate', color: '#ef4444', x: 710 },
+              { label: 'Precision', color: '#10b981', x: 500 },
+              { label: 'Recall', color: '#f59e0b', x: 580 },
+              { label: 'F1', color: '#2563eb', x: 650 },
+              { label: 'FP Rate', color: '#ef4444', x: 700 },
             ].map(l => (
               <g key={l.label}>
-                <circle cx={l.x} cy="12" r="4" fill={l.color} />
-                <text x={l.x + 8} y="16" fill="#64748b" fontSize="10" fontWeight="bold">{l.label}</text>
+                <circle cx={l.x} cy="10" r="4" fill={l.color} filter="url(#glow)" />
+                <text x={l.x + 10} y="14" fill="#94a3b8" fontSize="9" fontWeight="black" className="uppercase tracking-widest">{l.label}</text>
               </g>
             ))}
           </svg>
@@ -407,46 +433,53 @@ export default function TriLayerInsights({ engine }) {
       </Panel>
 
       {/* DISAGREEMENT CASES TABLE */}
-      <Panel title="Shield Disagreement Cases — where LightGBM and IsoForest conflict most">
+      {/* DISAGREEMENT CASES TABLE (Industrial Redesign) */}
+      <Panel title="Shield Disagreement Cases — Outlier Analysis & Conflict Resolution" className="bg-slate-900/40 border-white/10">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
-            <thead className="border-b border-slate-200">
+            <thead className="border-b border-white/5">
               <tr>
-                <th className="py-3 pl-4 text-[10px] uppercase tracking-widest text-slate-400 font-bold w-36">Unit ID</th>
-                <th className="py-3 text-[10px] uppercase tracking-widest font-black text-right w-24" style={{ color: '#2563eb' }}>S1 (LGB)</th>
-                <th className="py-3 text-[10px] uppercase tracking-widest font-black text-right w-24" style={{ color: '#7c3aed' }}>S2 (ISO)</th>
-                <th className="py-3 text-[10px] uppercase tracking-widest font-black text-right w-24" style={{ color: '#d97706' }}>S3 (PHY)</th>
-                <th className="py-3 text-[10px] uppercase tracking-widest font-black text-right pr-6 w-28">Decision</th>
-                <th className="py-3 text-[10px] uppercase tracking-widest font-black text-center w-28">Delta</th>
-                <th className="py-3 text-[10px] uppercase tracking-widest text-slate-400 font-bold pl-4">Reason for Conflict</th>
+                <th className="py-4 pl-6 text-[10px] uppercase tracking-[0.2em] text-slate-500 font-black w-36">Unit ID</th>
+                <th className="py-4 text-[10px] uppercase tracking-[0.2em] font-black text-right w-24" style={{ color: '#2563eb' }}>S1 (LGB)</th>
+                <th className="py-4 text-[10px] uppercase tracking-[0.2em] font-black text-right w-24" style={{ color: '#7c3aed' }}>S2 (ISO)</th>
+                <th className="py-4 text-[10px] uppercase tracking-[0.2em] font-black text-right w-24" style={{ color: '#d97706' }}>S3 (PHY)</th>
+                <th className="py-4 text-[10px] uppercase tracking-[0.2em] font-black text-right pr-6 w-28">Decision</th>
+                <th className="py-4 text-[10px] uppercase tracking-[0.2em] font-black text-center w-28">Delta (%)</th>
+                <th className="py-4 text-[10px] uppercase tracking-[0.2em] text-slate-500 font-black pl-6">Conflict Attribution</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
-              {topDisagreements.map(t => {
-                const isHigh = t.delta > 0.5
+            <tbody className="divide-y divide-white/5">
+              {topDisagreements.map((t, idx) => {
+                const deltaPct = t.delta * 100
+                const isCriticalDelta = deltaPct > 50
                 return (
-                  <tr key={t.unit_id || t.id} className={clsx("hover:bg-slate-50/80 transition-colors", isHigh && "bg-red-50/20")}>
-                    <td className="py-3.5 pl-4 text-[11px] text-slate-700 font-bold">
-                      <span className="bg-slate-100 px-2 py-0.5 rounded font-mono border border-slate-200">{(t.unit_id || t.id || '').slice(0, 12)}</span>
+                  <tr key={t.unit_id || t.id} className="hover:bg-white/5 transition-colors group">
+                    <td className="py-4 pl-6 text-[11px] text-slate-300 font-black">
+                      <span className="bg-white/5 px-2.5 py-1 rounded-md font-mono border border-white/10 group-hover:border-white/20 transition-all">{(t.unit_id || t.id || '').slice(0, 12)}</span>
                     </td>
-                    <td className="py-3.5 text-xs text-right font-black" style={{ color: '#2563eb' }}>{((t.lgbScore || 0) * 100).toFixed(1)}%</td>
-                    <td className="py-3.5 text-xs text-right font-black" style={{ color: '#7c3aed' }}>{((t.isoScore || 0) * 100).toFixed(1)}%</td>
-                    <td className="py-3.5 text-xs text-right font-black" style={{ color: '#d97706' }}>{((t.behScore || 0) * 100).toFixed(1)}%</td>
-                    <td className="py-3.5 text-[10px] text-right pr-6">
-                      <span className={clsx("px-2.5 py-1 rounded-md font-black uppercase tracking-wider",
-                        t.decision === 'REJECT' ? 'text-red-600 bg-red-50 border border-red-100' : t.decision === 'REVIEW' ? 'text-amber-600 bg-amber-50 border border-amber-100' : 'text-emerald-600 bg-emerald-50 border border-emerald-100'
+                    <td className="py-4 text-xs text-right font-black" style={{ color: '#2563eb' }}>{((t.lgbScore || 0) * 100).toFixed(1)}%</td>
+                    <td className="py-4 text-xs text-right font-black" style={{ color: '#7c3aed' }}>{((t.isoScore || 0) * 100).toFixed(1)}%</td>
+                    <td className="py-4 text-xs text-right font-black" style={{ color: '#d97706' }}>{((t.behScore || 0) * 100).toFixed(1)}%</td>
+                    <td className="py-4 text-[10px] text-right pr-6">
+                      <span className={clsx("px-3 py-1 rounded-full font-black uppercase tracking-widest border",
+                        t.decision === 'REJECT' ? 'text-red-500 border-red-500/30 bg-red-500/10' : t.decision === 'REVIEW' ? 'text-amber-500 border-amber-500/30 bg-amber-500/10' : 'text-emerald-500 border-emerald-500/30 bg-emerald-500/10'
                       )}>{t.decision}</span>
                     </td>
-                    <td className={clsx("py-3.5 text-xs text-center font-black", isHigh ? 'text-red-500' : t.delta > 0.3 ? 'text-amber-500' : 'text-emerald-500')}>
-                      ±{(t.delta * 100).toFixed(1)}%
+                    <td className="py-4 text-center">
+                      <span className={clsx(
+                        "px-3 py-1 rounded-md text-xs font-black font-mono inline-block min-w-[70px]",
+                        isCriticalDelta ? "bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]" : deltaPct > 30 ? "bg-amber-500/20 text-amber-500" : "bg-emerald-500/20 text-emerald-500"
+                      )}>
+                        ±{deltaPct.toFixed(1)}%
+                      </span>
                     </td>
-                    <td className="py-3.5 text-[10px] text-slate-500 pl-4 font-bold tracking-tight">
-                      {t.reasons?.join(' | ') || 'No explicit physics signal'}
+                    <td className="py-4 text-[10px] text-slate-400 pl-6 font-black tracking-tight italic opacity-80 group-hover:opacity-100 transition-opacity">
+                      {t.reasons?.join(' | ') || 'No explicit physics signal detected'}
                     </td>
                   </tr>
                 )
               })}
-              {topDisagreements.length === 0 && <tr><td colSpan={7} className="text-center py-12 text-xs text-slate-400 font-bold uppercase tracking-widest">Waiting for conflicting signals from Tri-Shield...</td></tr>}
+              {topDisagreements.length === 0 && <tr><td colSpan={7} className="text-center py-20 text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] bg-white/[0.02]">Syncing Conflict Trajectories...</td></tr>}
             </tbody>
           </table>
         </div>

@@ -74,7 +74,7 @@ export default function Header({ engine, activeTab }) {
 
           <button 
             onClick={triggerExcursionBurst}
-            className="flex items-center gap-2 px-5 py-2 rounded-xl text-[11px] font-black text-white bg-red-600 hover:bg-red-700 transition-all shadow-lg shadow-red-500/30 animate-excursion-glow ml-1 uppercase tracking-widest"
+            className="flex items-center gap-2 px-5 py-2 rounded-xl text-[11px] font-black text-white bg-red-600 hover:bg-red-700 transition-all shadow-[0_0_15px_rgba(239,68,68,0.4)] border border-red-500/50 animate-excursion-glow ml-1 uppercase tracking-widest"
           >
             <Flame size={14} />
             Yield Excursion
@@ -92,6 +92,13 @@ export default function Header({ engine, activeTab }) {
           </div>
         </div>
 
+      </div>
+      
+      {/* Branding Anchor Tagline */}
+      <div className="absolute top-2 right-8 pointer-events-none opacity-20 hidden lg:block">
+        <span className="font-sans text-[8px] font-black text-white uppercase tracking-[0.4em] italic">
+          Intelligence Accelerated™
+        </span>
       </div>
     </header>
   )
