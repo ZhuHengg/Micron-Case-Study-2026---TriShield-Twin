@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import {
-  Activity, ArrowRight, ShieldAlert, Cpu, Box, Scissors, Droplet, 
+  Activity, ArrowRight, ShieldAlert, Cpu, Box, Scissors, Droplet,
   Thermometer, Settings2, AlertTriangle, CheckCircle2, XCircle
 } from 'lucide-react'
 import clsx from 'clsx'
@@ -19,7 +19,7 @@ const STAGES = [
 
 export default function UnitJourney({ engine }) {
   const { allUnits, thresholds } = engine
-  
+
   // Get all flagged/blocked units first
   const anomalousUnits = useMemo(() => {
     return allUnits.filter(u => u.decision !== 'PASS')
@@ -62,7 +62,7 @@ export default function UnitJourney({ engine }) {
         </div>
 
         <div className="flex items-center gap-4">
-          <select 
+          <select
             className="border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-slate-700 shadow-sm"
             value={activeUnit.unit_id || activeUnit.id}
             onChange={(e) => setSelectedUnitId(e.target.value)}
@@ -83,8 +83,8 @@ export default function UnitJourney({ engine }) {
           <Badge className={clsx(
             "px-4 py-2 text-sm font-black tracking-widest",
             activeUnit.decision === 'REJECT' ? "bg-red-500 hover:bg-red-600" :
-            activeUnit.decision === 'REVIEW' ? "bg-amber-500 hover:bg-amber-600" :
-            "bg-emerald-500 hover:bg-emerald-600"
+              activeUnit.decision === 'REVIEW' ? "bg-amber-500 hover:bg-amber-600" :
+                "bg-emerald-500 hover:bg-emerald-600"
           )}>
             {activeUnit.decision}
           </Badge>
@@ -101,10 +101,10 @@ export default function UnitJourney({ engine }) {
             {STAGES.map((stage, idx) => {
               const rrs = activeUnit[`rrs_${stage.id}`] || 0
               const delta = activeUnit[`rrs_delta_${stage.id}`] || 0
-              
+
               const isSkipped = stage.id > terminationStage
               const isTerminal = stage.id === terminationStage && activeUnit.decision === 'REJECT'
-              
+
               let statusColor = "bg-emerald-100 text-emerald-700 border-emerald-200"
               let iconColor = "text-emerald-500"
               if (isSkipped) {
@@ -121,8 +121,8 @@ export default function UnitJourney({ engine }) {
               const isSelected = activeStageId === stage.id
 
               return (
-                <div 
-                  key={stage.id} 
+                <div
+                  key={stage.id}
                   className="flex flex-col items-center relative cursor-pointer group"
                   onClick={() => setActiveStageId(stage.id)}
                 >
@@ -182,7 +182,7 @@ export default function UnitJourney({ engine }) {
 
       {/* ═════════ DETAILS & SHIELD ATTRIBUTION ═════════ */}
       <div className="flex gap-6 flex-1 min-h-0">
-        
+
         {/* Left: Stage Parameters */}
         <Card className="flex-1 border-slate-200 shadow-sm rounded-[24px] overflow-hidden bg-white flex flex-col">
           <CardHeader className="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
@@ -240,7 +240,7 @@ export default function UnitJourney({ engine }) {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
-            
+
             <div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Shield 1: LightGBM</span>
@@ -249,9 +249,9 @@ export default function UnitJourney({ engine }) {
                 </span>
               </div>
               <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div 
-                  className={clsx("h-full", activeUnit.lgbScore > 0.6 ? "bg-red-500" : "bg-emerald-500")} 
-                  style={{ width: `${activeUnit.lgbScore * 100}%` }} 
+                <div
+                  className={clsx("h-full", activeUnit.lgbScore > 0.6 ? "bg-red-500" : "bg-emerald-500")}
+                  style={{ width: `${activeUnit.lgbScore * 100}%` }}
                 />
               </div>
             </div>
@@ -264,9 +264,9 @@ export default function UnitJourney({ engine }) {
                 </span>
               </div>
               <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div 
-                  className={clsx("h-full", activeUnit.isoScore > 0.5 ? "bg-amber-500" : "bg-emerald-500")} 
-                  style={{ width: `${activeUnit.isoScore * 100}%` }} 
+                <div
+                  className={clsx("h-full", activeUnit.isoScore > 0.5 ? "bg-amber-500" : "bg-emerald-500")}
+                  style={{ width: `${activeUnit.isoScore * 100}%` }}
                 />
               </div>
             </div>
@@ -279,9 +279,9 @@ export default function UnitJourney({ engine }) {
                 </span>
               </div>
               <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div 
-                  className={clsx("h-full", activeUnit.behScore > 0.6 ? "bg-red-500" : "bg-emerald-500")} 
-                  style={{ width: `${activeUnit.behScore * 100}%` }} 
+                <div
+                  className={clsx("h-full", activeUnit.behScore > 0.6 ? "bg-red-500" : "bg-emerald-500")}
+                  style={{ width: `${activeUnit.behScore * 100}%` }}
                 />
               </div>
             </div>
@@ -296,7 +296,7 @@ export default function UnitJourney({ engine }) {
                   {(activeUnit.ensembleScore * 100).toFixed(1)}
                 </span>
               </div>
-              
+
               {activeUnit.reasons && activeUnit.reasons.length > 0 && (
                 <div className="space-y-2">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Triggers:</span>

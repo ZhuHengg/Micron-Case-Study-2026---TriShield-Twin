@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import {
   Cpu, Zap, Thermometer, Microscope, Scissors, CheckCircle,
-  Search, AlertTriangle, ChevronDown, Filter, Settings2,
+  Search, AlertTriangle, ChevronDown, Filter, Settings2, Target,
   AlertCircle, Activity, Box, Database, Clock, TrendingUp, ShieldAlert, Droplet,
   XCircle, BookOpen
 } from 'lucide-react'
@@ -291,7 +291,7 @@ function GaugeChart({ score, decision }) {
 }
 
 export default function UnitInvestigation({ engine }) {
-  const { allUnits } = engine || { allUnits: [] }
+  const { allUnits = [] } = engine || {}
   const [sortMode, setSortMode] = useState('Highest Risk')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedUnitId, setSelectedUnitId] = useState(null)
@@ -638,8 +638,8 @@ export default function UnitInvestigation({ engine }) {
                     return (
                       <div key={paramKey} className={clsx(
                         "flex-none w-60 p-3 rounded-xl border transition-all relative overflow-hidden",
-                        isSuspicious 
-                          ? "bg-red-500/10 border-red-500/30 ring-1 ring-red-500/20" 
+                        isSuspicious
+                          ? "bg-red-500/10 border-red-500/30 ring-1 ring-red-500/20"
                           : "bg-white/5 border-white/5 shadow-inner"
                       )}>
                         <div className="flex justify-between items-start mb-2 relative z-10">
@@ -710,7 +710,7 @@ export default function UnitInvestigation({ engine }) {
                   </div>
                 </div>
               </div>
-              
+
               {/* Triggers (now below the horizontal row) */}
               {activeUnit.reasons && activeUnit.reasons.length > 0 && (
                 <div className="mt-8 w-full bg-white/5 rounded-2xl p-4 border border-white/5">
@@ -802,7 +802,7 @@ export default function UnitInvestigation({ engine }) {
                 effect: isCritical ? 'Tolerance stack exceeds critical threshold — unit at high risk of burn-in failure' : 'Cumulative stress within acceptable envelope',
                 location: 'Global — all stages contribute',
                 color: isCritical ? 'text-red-400' : 'text-emerald-400',
-                bg: 'bg-slate-900/60', 
+                bg: 'bg-slate-900/60',
                 border: isCritical ? 'border-red-500/30' : 'border-emerald-500/30',
               },
             ]

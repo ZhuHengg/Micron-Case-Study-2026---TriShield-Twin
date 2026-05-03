@@ -75,134 +75,148 @@ export default function ParameterLab() {
   }
 
   return (
-    <div className="flex flex-col space-y-6 animate-fade-in">
+    <div className="flex flex-col space-y-6 animate-fade-in pb-10">
 
       {/* Top Row: Inputs & Results */}
-      <div className="grid grid-cols-[1fr_400px] gap-6 shrink-0">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-6 shrink-0">
 
         {/* Left: Input Form */}
-        <div className="bg-white rounded-[24px] p-8 shadow-premium flex flex-col border border-slate-200/60">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#0066CC]/10 flex items-center justify-center text-[#0066CC]">
-                <Beaker size={20} />
+        <div className="bg-slate-900/40 backdrop-blur-xl rounded-[32px] p-8 shadow-2xl flex flex-col border border-white/5 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
+          
+          <div className="flex items-center justify-between mb-8 relative z-10">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-blue-600/10 border border-blue-500/30 flex items-center justify-center text-blue-400 shadow-[0_0_15px_rgba(37,99,235,0.2)]">
+                <Beaker size={24} />
               </div>
               <div>
-                <h3 className="font-sans text-[14px] font-black uppercase tracking-widest text-slate-800">Process Simulation Lab</h3>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Digital Twin Parameter Tuning</span>
+                <h3 className="font-sans text-[15px] font-black uppercase tracking-[0.2em] text-white">Process Simulation Lab</h3>
+                <span className="text-[10px] font-black text-blue-400/60 uppercase tracking-[0.3em]">Digital Twin Parameter Tuning</span>
               </div>
             </div>
-            <button onClick={handleReset} className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 hover:text-[#0066CC] uppercase tracking-widest transition-colors">
-              <RefreshCw size={12} /> Reset System
+            <button onClick={handleReset} className="flex items-center gap-2 text-[10px] font-black text-white/40 hover:text-blue-400 uppercase tracking-widest transition-all">
+              <RefreshCw size={14} className="hover:rotate-180 transition-transform duration-500" /> Reset System
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-10 gap-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 relative z-10">
             {Object.entries(params).map(([key, value]) => {
               const isDeviated = Math.abs(value - SENSOR_NOMINALS[key]) / SENSOR_NOMINALS[key] > 0.1
               return (
-                <div key={key} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{key.replace(/_/g, ' ')}</label>
-                    <span className="font-mono text-[10px] font-bold text-slate-400">Nom: {SENSOR_NOMINALS[key]}</span>
+                <div key={key} className="space-y-3">
+                  <div className="flex justify-between items-center px-1">
+                    <label className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">{key.replace(/_/g, ' ')}</label>
+                    <span className="font-mono text-[10px] font-black text-blue-400/40">Nom: {SENSOR_NOMINALS[key]}</span>
                   </div>
-                  <div className="relative">
+                  <div className="relative group/field">
                     <input 
                       type="number" 
                       value={value}
                       onChange={(e) => handleParamChange(key, e.target.value)}
                       className={clsx(
-                        "w-full bg-slate-50 border rounded-xl px-4 py-3 text-[14px] font-black font-mono transition-all focus:outline-none focus:ring-2 focus:ring-[#0066CC]/20",
-                        isDeviated ? "border-amber-300 text-amber-700 bg-amber-50/30" : "border-slate-200 text-slate-800 focus:border-[#0066CC]"
+                        "w-full bg-black/40 border rounded-2xl px-5 py-3.5 text-[15px] font-black font-mono transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/40",
+                        isDeviated 
+                          ? "border-amber-500/50 text-amber-400 bg-amber-500/5 shadow-[0_0_15px_rgba(245,158,11,0.1)]" 
+                          : "border-white/10 text-white focus:border-blue-500/50"
                       )} 
                     />
-                    {isDeviated && <AlertTriangle size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-500" />}
+                    {isDeviated && <AlertTriangle size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-amber-500 animate-pulse" />}
                   </div>
                 </div>
               )
             })}
           </div>
 
-          <div className="mt-10 flex justify-end gap-3">
+          <div className="mt-12 flex justify-end gap-4 relative z-10">
             <button
               onClick={handleOptimize}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest border-2 border-[#00A3AD] text-[#00A3AD] hover:bg-[#00A3AD]/5 transition-all"
+              className="flex items-center gap-3 px-8 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] border border-blue-400/30 text-blue-400 hover:bg-blue-400/10 hover:border-blue-400/50 transition-all shadow-[0_0_20px_rgba(37,99,235,0.1)]"
             >
-              <Sparkles size={16} />
+              <Sparkles size={18} />
               Inverse ROM Optimization
             </button>
             <button
               onClick={handleScore}
               disabled={isScoring}
-              className="bg-gradient-signature text-white px-10 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest shadow-btn-primary hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="relative overflow-hidden group/btn bg-gradient-to-r from-blue-600 to-blue-500 text-white px-10 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(37,99,235,0.3)] hover:shadow-blue-600/40 hover:-translate-y-0.5 transition-all flex items-center gap-3 disabled:opacity-70"
             >
-              {isScoring ? <RefreshCw size={16} className="animate-spin" /> : <Play size={16} />}
-              {isScoring ? 'Inference Running...' : 'Execute Simulation'}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-700" />
+              {isScoring ? <RefreshCw size={18} className="animate-spin" /> : <Play size={18} />}
+              {isScoring ? 'Neural Ingestion...' : 'Execute Simulation'}
             </button>
           </div>
         </div>
 
-        {/* Right: Results */}
-        <div className="bg-white rounded-[24px] p-8 shadow-premium border border-slate-200/60 flex flex-col">
-          <div className="flex items-center gap-2 mb-8">
-            <ShieldAlert size={18} className="text-[#0066CC]" />
-            <h3 className="font-sans text-[11px] text-slate-400 font-black uppercase tracking-widest">Inference Result</h3>
+        {/* Right: Results Panel */}
+        <div className="bg-slate-900/40 backdrop-blur-xl rounded-[32px] p-8 shadow-2xl border border-white/5 flex flex-col relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
+          
+          <div className="flex items-center gap-3 mb-10 relative z-10">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
+              <ShieldAlert size={20} />
+            </div>
+            <h3 className="font-sans text-[11px] text-white/40 font-black uppercase tracking-[0.3em]">Inference Result</h3>
           </div>
 
           {!result ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center text-slate-300">
-              <div className="w-20 h-20 rounded-3xl border-4 border-dashed border-slate-100 flex items-center justify-center mb-6">
-                <Database size={32} className="text-slate-200" />
+            <div className="flex-1 flex flex-col items-center justify-center text-center relative z-10">
+              <div className="w-24 h-24 rounded-[32px] border-2 border-dashed border-white/5 flex items-center justify-center mb-8 bg-white/2 group-hover:border-white/10 transition-colors">
+                <Database size={40} className="text-white/10" />
               </div>
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] leading-relaxed">
+              <p className="text-[12px] font-black text-white/20 uppercase tracking-[0.3em] leading-loose">
                 Awaiting Parameter<br />Neural Ingestion
               </p>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col animate-pop-out">
+            <div className="flex-1 flex flex-col animate-pop-out relative z-10">
               {/* Score Hero */}
-              <div className="flex flex-col items-center mb-8 bg-slate-50/50 rounded-3xl p-6 border border-slate-100">
-                <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Ensemble Risk Index</div>
+              <div className="flex flex-col items-center mb-10 bg-white/2 rounded-[32px] p-8 border border-white/5 shadow-inner">
+                <div className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-4">Ensemble Risk Index</div>
                 <div className={clsx(
-                  "text-6xl font-black font-mono leading-none tracking-tighter mb-4",
-                  result.riskScore > 50 ? "text-red-600" : "text-[#00A3AD]"
+                  "text-7xl font-black font-mono leading-none tracking-tighter mb-6 transition-colors duration-500",
+                  result.riskScore > 50 ? "text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]" : "text-emerald-500 drop-shadow-[0_0_15px_rgba(16,185,129,0.4)]"
                 )}>
-                  {result.riskScore}<span className="text-2xl opacity-30">.0</span>
+                  {result.riskScore}<span className="text-2xl opacity-20">.0</span>
                 </div>
                 <div className={clsx(
-                  "px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-sm",
-                  result.riskScore > 50 ? "bg-red-600 text-white" : "bg-[#00A3AD] text-white"
+                  "px-8 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.2em] border backdrop-blur-md shadow-xl",
+                  result.riskScore > 50 ? "bg-red-500/20 text-red-400 border-red-500/30" : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
                 )}>
                   {result.riskLevel}
                 </div>
               </div>
 
               {/* Shields Area */}
-              <div className="space-y-4 mb-8">
+              <div className="space-y-6 mb-10 px-2">
                 {Object.entries(result.models).map(([model, score]) => (
                   <div key={model}>
-                    <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{model} Shield</span>
-                      <span className="font-mono text-[11px] font-black text-slate-700">{score}%</span>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">{model} Core</span>
+                      <span className="font-mono text-[12px] font-black text-white">{score}%</span>
                     </div>
-                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/5 shadow-inner">
                       <div 
-                        className={clsx("h-full rounded-full transition-all duration-1000", score > 60 ? "bg-red-500" : "bg-[#0066CC]")} 
+                        className={clsx(
+                          "h-full rounded-full transition-all duration-1000 relative overflow-hidden", 
+                          score > 60 ? "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]" : "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                        )} 
                         style={{ width: `${score}%` }} 
-                      />
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
 
               {/* Attribution */}
-              <div className="mt-auto pt-6 border-t border-slate-100">
-                <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Root Cause Attribution</h4>
-                <div className="space-y-2">
+              <div className="mt-auto pt-8 border-t border-white/5">
+                <h4 className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mb-4">Neural Root Cause</h4>
+                <div className="space-y-3">
                   {result.reasons.map((reason, idx) => (
-                    <div key={idx} className="flex gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                      <AlertTriangle size={14} className="text-amber-500 shrink-0" />
-                      <span className="text-[10px] font-bold text-slate-600 leading-tight">{reason}</span>
+                    <div key={idx} className="flex gap-3 p-4 bg-white/2 rounded-2xl border border-white/5 hover:bg-white/5 transition-colors">
+                      <AlertTriangle size={16} className="text-amber-500 shrink-0" />
+                      <span className="text-[10px] font-black text-white/70 uppercase tracking-widest leading-relaxed">{reason}</span>
                     </div>
                   ))}
                 </div>
@@ -213,38 +227,47 @@ export default function ParameterLab() {
       </div>
 
       {/* Middle: SHAP Explanation */}
-      <div className="bg-white rounded-[24px] p-8 shadow-premium border border-slate-200/60">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
-            <BarChart2 size={18} />
+      <div className="bg-slate-900/40 backdrop-blur-xl rounded-[32px] p-10 shadow-2xl border border-white/5 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
+        
+        <div className="flex items-center gap-4 mb-10 relative z-10">
+          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-blue-400 border border-white/10 shadow-inner">
+            <BarChart2 size={22} />
           </div>
-          <h3 className="font-sans text-[11px] text-slate-800 font-black uppercase tracking-widest">Neural Feature Contribution (SHAP)</h3>
+          <div>
+            <h3 className="font-sans text-[13px] text-white font-black uppercase tracking-[0.3em]">Neural Feature Contribution (SHAP)</h3>
+            <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] mt-1">Impact Attribution Engine</p>
+          </div>
         </div>
 
         {!result ? (
-          <div className="h-32 flex items-center justify-center text-[11px] font-black text-slate-300 uppercase tracking-[0.2em] border-2 border-dashed border-slate-100 rounded-[24px]">
-            Execute Simulation to Generate Model Explanations
+          <div className="h-40 flex items-center justify-center text-[11px] font-black text-white/20 uppercase tracking-[0.3em] border-2 border-dashed border-white/5 rounded-[32px] bg-white/2">
+            Execute Simulation to Generate Neural Explanations
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-8 relative z-10 px-4">
             {result.shap.map((item, idx) => (
-              <div key={idx} className="flex items-center gap-6">
-                <div className="w-32 text-right">
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{item.feature}</span>
+              <div key={idx} className="flex items-center gap-8 group">
+                <div className="w-40 text-right shrink-0">
+                  <span className="text-[11px] font-black text-white/40 uppercase tracking-[0.2em] group-hover:text-white transition-colors">{item.feature}</span>
                 </div>
                 <div className="flex-1 flex items-center">
-                  <div className="flex-1 h-8 bg-slate-50 rounded-lg relative overflow-hidden flex items-center">
-                    <div className="absolute left-1/2 w-px h-full bg-slate-200 z-10" />
+                  <div className="flex-1 h-10 bg-black/30 rounded-2xl relative overflow-hidden flex items-center border border-white/5 shadow-inner">
+                    <div className="absolute left-1/2 w-[2px] h-full bg-white/10 z-10" />
                     <div 
                       className={clsx(
-                        "h-full transition-all duration-1000",
-                        item.positive ? "bg-red-500/20 border-l-2 border-red-500" : "bg-[#00A3AD]/20 border-r-2 border-[#00A3AD] absolute right-1/2"
+                        "h-4 rounded-full transition-all duration-1000 relative overflow-hidden",
+                        item.positive 
+                          ? "bg-red-500/30 border-l-4 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)] ml-[50%]" 
+                          : "bg-emerald-500/30 border-r-4 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)] absolute right-1/2"
                       )}
                       style={{ width: `${Math.abs(item.value) * 5}%` }}
-                    />
+                    >
+                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+                    </div>
                   </div>
-                  <div className="w-16 ml-4">
-                    <span className={clsx("font-mono text-[11px] font-black", item.positive ? "text-red-500" : "text-[#00A3AD]")}>
+                  <div className="w-20 ml-6 shrink-0">
+                    <span className={clsx("font-mono text-[13px] font-black drop-shadow-md", item.positive ? "text-red-400" : "text-emerald-400")}>
                       {item.positive ? '+' : '-'}{Math.abs(item.value).toFixed(1)}
                     </span>
                   </div>

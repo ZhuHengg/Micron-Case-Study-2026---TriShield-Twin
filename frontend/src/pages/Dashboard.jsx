@@ -14,28 +14,28 @@ import clsx from 'clsx'
 
 /* ─── BIN INFO ──────────────────────────────────────────── */
 const BIN_INFO = {
-  1: { name: 'Bin 1 — Perfect',        short: 'Perfect',        color: '#10b981', bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-  2: { name: 'Bin 2 — Marginal',       short: 'Marginal',       color: '#0ea5e9', bg: 'bg-sky-50',     text: 'text-sky-700',     dot: 'bg-sky-500' },
-  3: { name: 'Bin 3 — Recoverable',    short: 'Recoverable',    color: '#f59e0b', bg: 'bg-amber-50',   text: 'text-amber-700',   dot: 'bg-amber-500' },
-  4: { name: 'Bin 4 — Fab Passthrough', short: 'Fab Passthrough', color: '#f97316', bg: 'bg-orange-50', text: 'text-orange-700',  dot: 'bg-orange-500' },
-  5: { name: 'Bin 5 — Open/Short',     short: 'Open/Short',     color: '#ef4444', bg: 'bg-red-50',     text: 'text-red-700',     dot: 'bg-red-500' },
-  6: { name: 'Bin 6 — Delamination',   short: 'Delamination',   color: '#dc2626', bg: 'bg-red-50',     text: 'text-red-700',     dot: 'bg-red-600' },
-  7: { name: 'Bin 7 — Leakage',        short: 'Leakage',        color: '#e11d48', bg: 'bg-rose-50',    text: 'text-rose-700',    dot: 'bg-rose-500' },
+  1: { name: 'Bin 1 — Perfect', short: 'Perfect', color: '#10b981', bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+  2: { name: 'Bin 2 — Marginal', short: 'Marginal', color: '#0ea5e9', bg: 'bg-sky-50', text: 'text-sky-700', dot: 'bg-sky-500' },
+  3: { name: 'Bin 3 — Recoverable', short: 'Recoverable', color: '#f59e0b', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500' },
+  4: { name: 'Bin 4 — Fab Passthrough', short: 'Fab Passthrough', color: '#f97316', bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-500' },
+  5: { name: 'Bin 5 — Open/Short', short: 'Open/Short', color: '#ef4444', bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
+  6: { name: 'Bin 6 — Delamination', short: 'Delamination', color: '#dc2626', bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-600' },
+  7: { name: 'Bin 7 — Leakage', short: 'Leakage', color: '#e11d48', bg: 'bg-rose-50', text: 'text-rose-700', dot: 'bg-rose-500' },
   8: { name: 'Bin 8 — Functional Fail', short: 'Functional Fail', color: '#a21caf', bg: 'bg-fuchsia-50', text: 'text-fuchsia-700', dot: 'bg-fuchsia-600' },
 }
 
 const DECISION_STYLES = {
-  PASS:   { label: 'PASS',   bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-200' },
-  REVIEW: { label: 'REVIEW', bg: 'bg-amber-100',   text: 'text-amber-700',   border: 'border-amber-200' },
-  REJECT: { label: 'REJECT', bg: 'bg-red-100',     text: 'text-red-700',     border: 'border-red-200' },
+  PASS: { label: 'PASS', bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-200' },
+  REVIEW: { label: 'REVIEW', bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-200' },
+  REJECT: { label: 'REJECT', bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-200' },
 }
 
 const STAGES = [
-  { id: 1, name: 'Die Attach', icon: Box, color: '#2563eb', params: ['bond_force','xy_placement_offset','bond_line_thickness','epoxy_viscosity'] },
-  { id: 2, name: 'Wire Bond', icon: ZapIcon, color: '#7c3aed', params: ['ultrasonic_power','bond_time','loop_height','capillary_stroke_count','efo_voltage'] },
-  { id: 3, name: 'Molding', icon: Thermometer, color: '#d97706', params: ['transfer_pressure','clamping_force','molding_temperature','vacuum_level'] },
-  { id: 4, name: 'Ball Attach', icon: Cpu, color: '#0891b2', params: ['ball_placement_accuracy','laser_pulse_energy','reflow_peak_temp','flux_density'] },
-  { id: 5, name: 'Singulation', icon: Scissors, color: '#ec4899', params: ['spindle_current','vibration_amplitude','blade_wear_index','cooling_water_flow'] },
+  { id: 1, name: 'Die Attach', icon: Box, color: '#2563eb', params: ['bond_force', 'xy_placement_offset', 'bond_line_thickness', 'epoxy_viscosity'] },
+  { id: 2, name: 'Wire Bond', icon: ZapIcon, color: '#7c3aed', params: ['ultrasonic_power', 'bond_time', 'loop_height', 'capillary_stroke_count', 'efo_voltage'] },
+  { id: 3, name: 'Molding', icon: Thermometer, color: '#d97706', params: ['transfer_pressure', 'clamping_force', 'molding_temperature', 'vacuum_level'] },
+  { id: 4, name: 'Ball Attach', icon: Cpu, color: '#0891b2', params: ['ball_placement_accuracy', 'laser_pulse_energy', 'reflow_peak_temp', 'flux_density'] },
+  { id: 5, name: 'Singulation', icon: Scissors, color: '#ec4899', params: ['spindle_current', 'vibration_amplitude', 'blade_wear_index', 'cooling_water_flow'] },
 ]
 
 const SENSOR_NOMINALS = {
@@ -108,9 +108,9 @@ function GaugeChart({ score, decision }) {
         </g>
       </svg>
       <div className="absolute bottom-[-20px] text-center w-full">
-         <span className={clsx("text-3xl font-black font-sans leading-none", 
-            decision === 'REJECT' ? 'text-red-600' : decision === 'REVIEW' ? 'text-amber-600' : 'text-emerald-600'
-         )}>{score.toFixed(1)}</span>
+        <span className={clsx("text-3xl font-black font-sans leading-none",
+          decision === 'REJECT' ? 'text-red-600' : decision === 'REVIEW' ? 'text-amber-600' : 'text-emerald-600'
+        )}>{score.toFixed(1)}</span>
       </div>
     </div>
   )
@@ -121,9 +121,9 @@ const KpiCard = ({ icon: Icon, iconColor, label, value, subtitle, trend, trendUp
   <div className="flex-1 glass-card rounded-[20px] p-6 flex items-center gap-5 transition-all hover:shadow-xl hover:-translate-y-0.5 group">
     <div className={clsx(
       "w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105",
-      iconColor === 'blue'   && "bg-[#0066CC]/10 text-[#0066CC]",
-      iconColor === 'red'    && "bg-red-50 text-red-600",
-      iconColor === 'green'  && "bg-[#00A3AD]/10 text-[#00A3AD]",
+      iconColor === 'blue' && "bg-[#0066CC]/10 text-[#0066CC]",
+      iconColor === 'red' && "bg-red-50 text-red-600",
+      iconColor === 'green' && "bg-[#00A3AD]/10 text-[#00A3AD]",
     )}>
       <Icon size={28} />
     </div>
@@ -573,10 +573,10 @@ export default function Dashboard({ engine }) {
                         <div key={stage.id} className={clsx(
                           "flex items-center gap-3 p-3 rounded-xl border transition-all",
                           isSkipped ? "bg-slate-50 border-slate-100 opacity-50" :
-                          isTerminal ? "bg-red-50 border-red-200" :
-                          rrs >= 7 ? "bg-red-50/50 border-red-100" :
-                          rrs > 4 ? "bg-amber-50/50 border-amber-100" :
-                          "bg-white border-slate-100"
+                            isTerminal ? "bg-red-50 border-red-200" :
+                              rrs >= 7 ? "bg-red-50/50 border-red-100" :
+                                rrs > 4 ? "bg-amber-50/50 border-amber-100" :
+                                  "bg-white border-slate-100"
                         )}>
                           <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: isSkipped ? '#f1f5f9' : stage.color + '15', color: isSkipped ? '#94a3b8' : stage.color }}>
                             <Icon size={18} />
@@ -608,7 +608,7 @@ export default function Dashboard({ engine }) {
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                     <ShieldAlert size={14} className="text-sky-500" /> Tri-Shield Scores
                   </h4>
-                  
+
                   {/* Gauge Chart for Overall Risk */}
                   <div className="flex flex-col items-center justify-center mb-8 pb-6 border-b border-slate-100">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Overall Ensemble Risk</span>

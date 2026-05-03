@@ -15,6 +15,7 @@ import { Play, Pause, Zap } from 'lucide-react'
 import { useYieldEngine } from './hooks/useYieldEngine'
 
 import Header from './components/layout/Header'
+import ErrorBoundary from './components/shared/ErrorBoundary'
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -28,14 +29,16 @@ function App() {
         <Header engine={engine} activeTab={activeTab} />
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
-          {activeTab === 'dashboard' && <Dashboard engine={engine} />}
+          <ErrorBoundary>
+            {activeTab === 'dashboard' && <Dashboard engine={engine} />}
 
-          {activeTab === 'investigation' && <div className="h-full"><UnitInvestigation engine={engine} /></div>}
-          {activeTab === 'insights' && <div className="p-6"><TriLayerInsights engine={engine} /></div>}
-          {activeTab === 'physics' && <div className="p-6 h-full"><PhysicsInsights engine={engine} /></div>}
-          {activeTab === 'tuning' && <Tuning />}
-          {activeTab === 'parameter_lab' && <div className="p-6"><ParameterLab /></div>}
-          {activeTab === 'retraining' && <div className="p-6 h-full"><Retraining /></div>}
+            {activeTab === 'investigation' && <div className="h-full"><UnitInvestigation engine={engine} /></div>}
+            {activeTab === 'insights' && <div className="p-6"><TriLayerInsights engine={engine} /></div>}
+            {activeTab === 'physics' && <div className="p-6 h-full"><PhysicsInsights engine={engine} /></div>}
+            {activeTab === 'tuning' && <Tuning engine={engine} />}
+            {activeTab === 'parameter_lab' && <div className="p-6"><ParameterLab engine={engine} /></div>}
+            {activeTab === 'retraining' && <div className="p-6 h-full"><Retraining engine={engine} /></div>}
+          </ErrorBoundary>
         </main>
       </div>
     </div>

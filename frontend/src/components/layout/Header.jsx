@@ -19,7 +19,7 @@ const BREADCRUMBS = {
 }
 
 export default function Header({ engine, activeTab }) {
-  const { resetParams, triggerExcursionBurst, isRunning, setIsRunning } = engine
+  const { resetParams, triggerExcursionBurst, isRunning, setIsRunning } = engine || {}
   const title = PAGE_TITLES[activeTab] || 'Micron Sentinel'
   const breadcrumb = BREADCRUMBS[activeTab] || 'Production Env'
 

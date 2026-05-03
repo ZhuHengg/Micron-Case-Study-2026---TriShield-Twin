@@ -125,22 +125,22 @@ export default function TriLayerInsights({ engine }) {
         </div>
         <div className="flex gap-3">
           {setIsRunning && (
-            <button 
-              onClick={() => setIsRunning(!isRunning)} 
+            <button
+              onClick={() => setIsRunning(!isRunning)}
               className={clsx(
                 "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                isRunning 
-                  ? "bg-amber-500/10 border border-amber-500/30 text-amber-500 hover:bg-amber-500/20" 
+                isRunning
+                  ? "bg-amber-500/10 border border-amber-500/30 text-amber-500 hover:bg-amber-500/20"
                   : "bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/20"
               )}
             >
-              {isRunning ? <Pause size={14}/> : <Play size={14}/>}
+              {isRunning ? <Pause size={14} /> : <Play size={14} />}
               {isRunning ? 'Pause Engine' : 'Resume Engine'}
             </button>
           )}
           {triggerExcursionBurst && (
             <button onClick={triggerExcursionBurst} className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-red-500/10 border border-red-500/30 text-red-500 hover:bg-red-500/20 transition-all">
-              <Zap size={14}/>
+              <Zap size={14} />
               Excursion Burst
             </button>
           )}
@@ -198,9 +198,9 @@ export default function TriLayerInsights({ engine }) {
                       <div className="absolute w-full h-1 bg-white/5 rounded-full overflow-hidden">
                         <div className="h-full transition-all" style={{ width: `${weights[s.key] * 100}%`, backgroundColor: s.color, boxShadow: `0 0 12px ${s.shadow}` }} />
                       </div>
-                      <input 
-                        type="range" min="0" max="100" value={weights[s.key] * 100} 
-                        onChange={e => handleWeightChange(s.key, Number(e.target.value))} 
+                      <input
+                        type="range" min="0" max="100" value={weights[s.key] * 100}
+                        onChange={e => handleWeightChange(s.key, Number(e.target.value))}
                         className="absolute w-full h-1 bg-transparent appearance-none cursor-pointer z-10 accent-white"
                       />
                     </div>
@@ -277,7 +277,7 @@ export default function TriLayerInsights({ engine }) {
                 { title: 'Both Agree Defective', val: matrix.bothDefect, pct: matrix.pctBothDefect, color: 'text-red-500', bg: 'bg-red-500/5', border: 'border-red-500/20' },
               ].map((q, idx) => (
                 <div key={idx} className={clsx("rounded-2xl border p-6 flex flex-col items-center justify-center relative overflow-hidden transition-all hover:scale-[1.02]", q.bg, q.border)}>
-                  <ShieldCheck className="absolute -left-4 -bottom-4 w-24 h-24 text-white opacity-[0.03] rotate-12" strokeWidth={1}/>
+                  <ShieldCheck className="absolute -left-4 -bottom-4 w-24 h-24 text-white opacity-[0.03] rotate-12" strokeWidth={1} />
                   <p className="text-[10px] uppercase tracking-[0.2em] mb-2 text-slate-400 font-black z-10 text-center">{q.title}</p>
                   <p className={clsx("text-4xl font-black z-10 font-mono", q.color)}>{q.val}</p>
                   <p className={clsx("text-[10px] mt-2 px-3 py-1 rounded-full font-black z-10 border", q.border, q.color)}>{q.pct.toFixed(1)}%</p>
@@ -293,14 +293,14 @@ export default function TriLayerInsights({ engine }) {
 
           <div className="grid grid-cols-2 gap-4">
             {/* 2: Physics Rule Breakdown */}
-            <Panel title="Shield 3 Rule Breakdown">
+            <Panel title="Shield 3 Rule Breakdown" className="bg-slate-900/40 backdrop-blur-md border-white/10">
               <div className="space-y-4 pt-2">
                 {ruleData.map(r => (
                   <div key={r.id}>
                     <div className="flex justify-between items-center mb-1">
                       <div className="flex items-center gap-2">
                         <span className="text-[9px] uppercase tracking-wider font-black px-1.5 py-0.5 rounded" style={{ backgroundColor: r.color + '15', color: r.color, border: `1px solid ${r.color}40` }}>{r.weight}</span>
-                        <span className="text-xs font-black text-slate-700">{r.name}</span>
+                        <span className="text-xs font-black text-slate-200">{r.name}</span>
                       </div>
                       <span className="text-[10px] font-bold text-slate-400">{r.pct.toFixed(1)}% triggered</span>
                     </div>
@@ -308,9 +308,9 @@ export default function TriLayerInsights({ engine }) {
                     <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden mb-2">
                       <div className="h-full rounded-full transition-all" style={{ width: `${r.pct}%`, backgroundColor: r.color }} />
                     </div>
-                    <div className="flex justify-between text-[9px] uppercase tracking-wider px-1 bg-slate-50 border border-slate-100 py-1 rounded font-bold">
-                      <span className="text-slate-500">Risk when triggered: <span className="text-red-500 font-black">{r.avgTrig.toFixed(1)}%</span></span>
-                      <span className="text-slate-500">When not: <span className="text-emerald-500 font-black">{r.avgNot.toFixed(1)}%</span></span>
+                    <div className="flex justify-between text-[9px] uppercase tracking-wider px-2 bg-white/5 border border-white/5 py-1.5 rounded font-bold">
+                      <span className="text-slate-400">Risk when triggered: <span className="text-red-500 font-black">{r.avgTrig.toFixed(1)}%</span></span>
+                      <span className="text-slate-400">When not: <span className="text-emerald-500 font-black">{r.avgNot.toFixed(1)}%</span></span>
                     </div>
                   </div>
                 ))}
@@ -318,10 +318,10 @@ export default function TriLayerInsights({ engine }) {
             </Panel>
 
             {/* 3: Feature Correlation */}
-            <Panel title="Feature → Risk Correlation" className="flex flex-col h-full overflow-hidden">
+            <Panel title="Feature → Risk Correlation" className="flex flex-col h-full overflow-hidden bg-slate-900/40 backdrop-blur-md border-white/10">
               <div className="flex-1 overflow-y-auto -mr-2 pr-2">
                 <table className="w-full text-left border-collapse">
-                  <thead className="sticky top-0 bg-white z-10 border-b border-slate-200">
+                  <thead className="sticky top-0 bg-slate-900/90 backdrop-blur-sm z-10 border-b border-white/10">
                     <tr>
                       <th className="py-2 text-[9px] uppercase tracking-widest text-slate-400 font-bold">Feature</th>
                       <th className="py-2 text-[9px] uppercase tracking-widest text-slate-400 font-bold text-right w-14">Avg</th>
@@ -331,13 +331,13 @@ export default function TriLayerInsights({ engine }) {
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {featureCorrs.map(f => (
-                      <tr key={f.key} className="hover:bg-slate-50 transition-colors">
-                        <td className="py-2.5 text-[10px] text-slate-600 truncate max-w-[120px] pr-2 font-bold">{f.label}</td>
-                        <td className="py-2.5 text-[10px] text-right text-slate-700 font-bold">{f.avg > 1000 ? (f.avg / 1000).toFixed(1) + 'k' : f.avg.toFixed(2)}</td>
+                      <tr key={f.key} className="hover:bg-white/5 transition-colors">
+                        <td className="py-2.5 text-[10px] text-slate-300 truncate max-w-[120px] pr-2 font-bold">{f.label}</td>
+                        <td className="py-2.5 text-[10px] text-right text-slate-200 font-bold">{f.avg > 1000 ? (f.avg / 1000).toFixed(1) + 'k' : f.avg.toFixed(2)}</td>
                         <td className="py-2.5 w-28 px-2">
                           <div className="flex items-center justify-center w-full">
-                            <div className="w-full h-1.5 bg-slate-100 rounded-full flex relative">
-                              <div className="absolute top-0 bottom-0 left-1/2 w-px bg-slate-300 z-10" />
+                            <div className="w-full h-1.5 bg-white/5 rounded-full flex relative">
+                              <div className="absolute top-0 bottom-0 left-1/2 w-px bg-white/20 z-10" />
                               {f.corr > 0
                                 ? <div className="absolute top-0 bottom-0 left-1/2 bg-red-400 rounded-r-full" style={{ width: `${Math.min(f.corr * 100, 50)}%` }} />
                                 : <div className="absolute top-0 bottom-0 right-1/2 bg-emerald-400 rounded-l-full" style={{ width: `${Math.min(Math.abs(f.corr) * 100, 50)}%` }} />}
@@ -361,9 +361,9 @@ export default function TriLayerInsights({ engine }) {
       {/* Reclassification banner */}
       <div className="text-center py-4 border-t border-white/5">
         <span className="text-[10px] uppercase tracking-[0.4em] font-black text-slate-500">
-          Ensemble Reclassification Logic: 
-          <span className="text-white ml-2">{reclassified.toApprove + reclassified.toBlock} Units Re-Evaluated</span> · 
-          <span className="text-emerald-500"> {reclassified.toApprove} → Auto-Approve</span> · 
+          Ensemble Reclassification Logic:
+          <span className="text-white ml-2">{reclassified.toApprove + reclassified.toBlock} Units Re-Evaluated</span> ·
+          <span className="text-emerald-500"> {reclassified.toApprove} → Auto-Approve</span> ·
           <span className="text-red-500"> {reclassified.toBlock} → Auto-Block</span>
         </span>
       </div>

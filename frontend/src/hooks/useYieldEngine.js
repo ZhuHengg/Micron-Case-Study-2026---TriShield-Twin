@@ -185,11 +185,12 @@ export function useYieldEngine() {
   const matrix = useMemo(() => {
     let tp = 0, fp = 0, fn = 0, tn = 0
     allUnits.forEach(t => {
-      const predicted = t.decision !== 'PASS'
-      if (predicted && t.isDefective) tp++
-      else if (predicted && !t.isDefective) fp++
-      else if (!predicted && t.isDefective) fn++
-      else tn++
+      const predicted = t.decision === 'REJECT'
+      const actual = !!t.isDefective
+      if (predicted && actual) tp++
+      else if (predicted && !actual) fp++
+      else if (!predicted && !actual) tn++
+      else fn++
     })
     const precision = tp + fp > 0 ? tp / (tp + fp) : 1
     const recall = tp + fn > 0 ? tp / (tp + fn) : 1

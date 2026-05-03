@@ -416,6 +416,17 @@ export function generateUnitData(template = 'normal') {
 
   unit.is_defective = unit.bin_code >= 4 ? 1 : 0
 
+  // ── INJECT NEAR-MISS NOISE (For FP Testing) ─────────────────────────────
+  // Occasionally make a "Good" unit (Bin 1-3) have one very suspicious sensor 
+  // feature to trigger model uncertainty (False Positives).
+  if (!isDefective && Math.random() < 0.15) {
+    const feature = pick(['rrs_5', 'machine_risk_score', 'molding_temperature', 'ultrasonic_power'])
+    if (feature === 'rrs_5') unit.rrs_5 = parseFloat((0.7 + Math.random() * 0.2).toFixed(4))
+    if (feature === 'machine_risk_score') unit.machine_risk_score = parseFloat((0.65 + Math.random() * 0.2).toFixed(3))
+    if (feature === 'molding_temperature') unit.molding_temperature = parseFloat((187 + Math.random() * 5).toFixed(1))
+    if (feature === 'ultrasonic_power') unit.ultrasonic_power = parseFloat((0.5 + Math.random() * 0.3).toFixed(4))
+  }
+
   // ── Final Test Results ──────────────────────────────────────────────────
   const tests = getTestResults(unit.bin_code)
   unit.test_open_short  = tests.open_short.passed
